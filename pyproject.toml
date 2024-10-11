@@ -48,7 +48,7 @@ packages = ["src/query_farm_server_base"]
 
 [tool.pytest.ini_options]
 #addopts = "-s "
-addopts = "-n5 --mypy"
+addopts = "--mypy"
 #env = [
 #    "AWS_SECRET_ACCESS_KEY=test",
 #    "AWS_ACCESS_KEY_ID=test",

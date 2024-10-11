@@ -2,6 +2,7 @@ from collections.abc import Generator, Sequence
 from typing import TypedDict
 
 import boto3
+import os
 import pytest
 from moto import mock_aws
 from mypy_boto3_dynamodb.service_resource import Table
@@ -115,6 +116,9 @@ def mocked_dynamodb_tables() -> Generator[MockedTables, None, None]:
 def test_mocked_auth(
     mocked_dynamodb_tables: Generator[MockedTables, None, None],
 ) -> None:
+    os.environ["AWS_DEFAULT_REGION"] = "us-east-1"
+    os.environ["AWS_ACCESS_KEY_ID"] = "fake"
+    os.environ["AWS_SECRET_ACCESS_KEY"] = "fake"
     tables = next(mocked_dynamodb_tables)
     auth_manager = m.AuthManager(
         service_prefix="fake-test",
