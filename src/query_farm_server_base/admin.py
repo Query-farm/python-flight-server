@@ -30,7 +30,7 @@ def build(
     @click.option("--account-id", type=str, required=True, help="Account ID")
     def create_token(account_id: str) -> None:
         assert auth_manager.account_by_id(account_id)
-        token = auth_manager._token_type(account_id=account_id)
+        token = auth_manager.create_token(account_id=account_id)
         auth_manager.upsert_token(token)
         print(f"Added token {token.token}")
 
@@ -98,7 +98,7 @@ def build(
     def update_account(account_id: str, data: str) -> None:
         with open(data) as reader:
             account_data = json.load(reader)
-        account = auth_manager._account_type(**account_data)
+        account = auth_manager.create_account(**account_data)
         account.account_id = account_id
         auth_manager.upsert_account(account)
         print(f"Updated account {account_id}")
