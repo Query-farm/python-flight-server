@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install the latest version of rye
+      uses: eifinger/setup-rye@v4
+
+    - name: Install project dependencies
+      run: rye sync
+
+    - name: Run tests
+      run: rye test
