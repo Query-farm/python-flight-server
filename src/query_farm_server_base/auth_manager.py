@@ -1,7 +1,7 @@
 import json
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import Any, Literal, TypeVar
+from typing import Any, Generic, Literal, TypeVar
 
 import boto3
 import structlog
@@ -51,11 +51,17 @@ def _convert_to_dynamo_format(data: Any) -> Any:
     return data
 
 
-class AuthManager:
+AccountType = TypeVar("AccountType", bound=auth.Account)
+TokenType = TypeVar("TokenType", bound=auth.AccountToken)
+
+
+class AuthManager(Generic[AccountType, TokenType]):
     def __init__(
         self,
         *,
         service_prefix: str,
+        account_type: type[AccountType],
+        token_type: type[TokenType],
         aws_region: str = "us-east-1",
         tokens_table_name: str = "flight_cloud_tokens",
         accounts_table_name: str = "flight_cloud_accounts",
@@ -64,6 +70,8 @@ class AuthManager:
         cache_details: dict[CacheType, CachingDetails] = _default_cache_details,
     ) -> None:
         self._service_prefix = service_prefix
+        self._account_type = account_type
+        self._token_type = token_type
         dynamodb = boto3.resource("dynamodb", region_name=aws_region)
 
         self._tokens_table = tokens_table or dynamodb.Table(tokens_table_name)
@@ -124,10 +132,25 @@ class AuthManager:
             )
         return value
 
-    def data_for_token(self, token: str) -> auth.AccountToken:
+    def _token_from_dynamodb(
+        self,
+        dynamodb_item: dict[str, TableAttributeValueTypeDef],
+    ) -> TokenType:
+        beginning_prefix = f"{self._service_prefix}:"
+        return self._token_type(
+            **(
+                {**dynamodb_item}
+                | {
+                    "token": str(dynamodb_item["token"]).removeprefix(beginning_prefix),
+                    "account_id": str(dynamodb_item["account_id"]).removeprefix(beginning_prefix),
+                }
+            )
+        )
+
+    def data_for_token(self, token: str) -> TokenType:
         cached_token = self._get_cache(key=token, type="token")
         if cached_token is not None:
-            token_details = auth.AccountToken(**json.loads(cached_token))
+            token_details = self._token_type(**json.loads(cached_token))
         else:
             token_data = self._tokens_table.get_item(Key={"token": self._add_service_prefix(token)})
 
@@ -135,7 +158,7 @@ class AuthManager:
                 raise auth.TokenUnknown("Token not found")
 
             # Parse it out into the type with pydantic.
-            token_details = auth.AccountToken._from_dynamodb(self._service_prefix, token_data["Item"])
+            token_details = self._token_from_dynamodb(token_data["Item"])
 
             self._set_cache(key=token, value=token_details.model_dump_json(), type="token")
 
@@ -148,11 +171,11 @@ class AuthManager:
 
         return token_details
 
-    def account_by_id(self, account_id: str) -> auth.Account:
+    def account_by_id(self, account_id: str) -> AccountType:
         assert not account_id.startswith(self._add_service_prefix(""))
         cached_account = self._get_cache(key=account_id, type="account")
         if cached_account is not None:
-            account_details = auth.Account(**json.loads(cached_account), auth_manager=self)
+            account_details = self._account_type(**json.loads(cached_account), auth_manager=self)
         else:
             account_data = self._accounts_table.get_item(Key={"account_id": self._add_service_prefix(account_id)})
 
@@ -160,7 +183,7 @@ class AuthManager:
                 raise auth.AccountUnknown("Account not found: " + account_id)
 
             # Parse it out into the type with pydantic.
-            account_details = self.account_from_dynamodb(account_data["Item"])
+            account_details = self._account_from_dynamodb(account_data["Item"])
 
             self._set_cache(key=account_id, value=account_details.model_dump_json(), type="account")
 
@@ -169,7 +192,7 @@ class AuthManager:
 
         return account_details
 
-    def upsert_token(self, token: auth.AccountToken) -> PutItemOutputTableTypeDef:
+    def upsert_token(self, token: TokenType) -> PutItemOutputTableTypeDef:
         self._delete_cache(key=token.token, type="token")
         serialized = _convert_to_dynamo_format(token.model_dump(mode="json"))
         return self._tokens_table.put_item(
@@ -180,7 +203,7 @@ class AuthManager:
             }
         )
 
-    def upsert_account(self, account: auth.Account) -> PutItemOutputTableTypeDef:
+    def upsert_account(self, account: AccountType) -> PutItemOutputTableTypeDef:
         self._delete_cache(key=account.account_id, type="account")
         serialized = _convert_to_dynamo_format(account.model_dump(mode="json"))
         return self._accounts_table.put_item(
@@ -201,26 +224,26 @@ class AuthManager:
             if str(v["account_id"]).startswith(self._add_service_prefix(""))
         ]
 
-    def list_accounts(self) -> list[auth.Account]:
+    def list_accounts(self) -> list[AccountType]:
         accounts = self._accounts_table.scan()
         return [
-            self.account_from_dynamodb(v)
+            self._account_from_dynamodb(v)
             for v in accounts["Items"]
             if str(v["account_id"]).startswith(self._add_service_prefix(""))
         ]
 
-    def list_tokens_for_account_id(self, account_id: str) -> list[auth.AccountToken]:
+    def list_tokens_for_account_id(self, account_id: str) -> list[TokenType]:
         tokens = self._tokens_table.query(
             IndexName="account_id-index",
             KeyConditionExpression=Key("account_id").eq(self._add_service_prefix(account_id)),
         )
-        return [auth.AccountToken._from_dynamodb(self._service_prefix, v) for v in tokens["Items"]]
+        return [self._token_from_dynamodb(v) for v in tokens["Items"]]
 
-    def account_from_dynamodb(
+    def _account_from_dynamodb(
         self,
         dynamodb_item: dict[str, TableAttributeValueTypeDef],
-    ) -> auth.Account:
-        return auth.Account(
+    ) -> AccountType:
+        return self._account_type(
             auth_manager=self,
             **(
                 {**dynamodb_item}

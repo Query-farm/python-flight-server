@@ -1,8 +1,8 @@
+import os
 from collections.abc import Generator, Sequence
 from typing import TypedDict
 
 import boto3
-import os
 import pytest
 from moto import mock_aws
 from mypy_boto3_dynamodb.service_resource import Table
@@ -16,7 +16,9 @@ from . import auth_manager as m
 
 
 def test_create_auth_manager() -> None:
-    auth_manager = m.AuthManager(service_prefix="fake-test")
+    auth_manager = m.AuthManager[auth.Account, auth.AccountToken](
+        service_prefix="fake-test", account_type=auth.Account, token_type=auth.AccountToken
+    )
     assert auth_manager is not None
 
 
@@ -120,10 +122,12 @@ def test_mocked_auth(
     os.environ["AWS_ACCESS_KEY_ID"] = "fake"
     os.environ["AWS_SECRET_ACCESS_KEY"] = "fake"
     tables = next(mocked_dynamodb_tables)
-    auth_manager = m.AuthManager(
+    auth_manager = m.AuthManager[auth.Account, auth.AccountToken](
         service_prefix="fake-test",
         tokens_table=tables["tokens"],
         accounts_table=tables["accounts"],
+        account_type=auth.Account,
+        token_type=auth.AccountToken,
     )
     accounts = auth_manager.list_accounts()
     assert len(accounts) == 0
