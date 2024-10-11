@@ -25,6 +25,7 @@ cache3==0.4.3
     # via query-farm-server-base
 certifi==2024.8.30
     # via requests
+    # via sentry-sdk
 cffi==1.17.1
     # via cryptography
 charset-normalizer==3.4.0
@@ -58,11 +59,15 @@ mypy-boto3-dynamodb==1.35.24
     # via query-farm-server-base
 mypy-extensions==1.0.0
     # via mypy
+numpy==2.1.2
+    # via pyarrow
 packaging==24.1
     # via pytest
 pluggy==1.5.0
     # via pytest
 prettytable==3.11.0
+    # via query-farm-server-base
+pyarrow==17.0.0
     # via query-farm-server-base
 pycparser==2.22
     # via cffi
@@ -94,6 +99,8 @@ responses==0.25.3
 ruff==0.6.9
 s3transfer==0.10.3
     # via boto3
+sentry-sdk==2.16.0
+    # via query-farm-server-base
 six==1.16.0
     # via python-dateutil
 structlog==24.4.0
@@ -108,6 +115,7 @@ urllib3==2.2.3
     # via botocore
     # via requests
     # via responses
+    # via sentry-sdk
 wcwidth==0.2.13
     # via prettytable
 werkzeug==3.0.4

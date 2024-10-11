@@ -15,22 +15,6 @@ class AccountToken(BaseModel):
     disabled: bool | None = Field(default=False)
     created: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
-    @staticmethod
-    def _from_dynamodb(
-        service_prefix: str,
-        dynamodb_item: dict[str, TableAttributeValueTypeDef],
-    ) -> "AccountToken":
-        beginning_prefix = f"{service_prefix}:"
-        return AccountToken(
-            **(
-                {**dynamodb_item}
-                | {
-                    "token": str(dynamodb_item["token"]).removeprefix(beginning_prefix),
-                    "account_id": str(dynamodb_item["account_id"]).removeprefix(beginning_prefix),
-                }
-            )
-        )
-
 
 class Account(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
