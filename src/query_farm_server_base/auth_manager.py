@@ -150,6 +150,12 @@ class AuthManager(Generic[AccountType, TokenType]):
             )
         )
 
+    def create_account(self, **kwargs: Any) -> AccountType:
+        return self._account_type(**kwargs)
+
+    def create_token(self, **kwargs: Any) -> TokenType:
+        return self._token_type(**kwargs)
+
     def data_for_token(self, token: str) -> TokenType:
         cached_token = self._get_cache(key=token, type="token")
         if cached_token is not None:
