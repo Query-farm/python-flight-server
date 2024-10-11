@@ -65,6 +65,7 @@ class AuthManager(Generic[AccountType, TokenType]):
         aws_region: str = "us-east-1",
         tokens_table_name: str = "flight_cloud_tokens",
         accounts_table_name: str = "flight_cloud_accounts",
+        rate_limit_table_name: str = "flight_cloud_rate_limit",
         tokens_table: Table | None = None,
         accounts_table: Table | None = None,
         cache_details: dict[CacheType, CachingDetails] = _default_cache_details,
@@ -72,10 +73,12 @@ class AuthManager(Generic[AccountType, TokenType]):
         self._service_prefix = service_prefix
         self._account_type = account_type
         self._token_type = token_type
+        self._aws_region = aws_region
         dynamodb = boto3.resource("dynamodb", region_name=aws_region)
 
         self._tokens_table = tokens_table or dynamodb.Table(tokens_table_name)
         self._accounts_table = accounts_table or dynamodb.Table(accounts_table_name)
+        self._rate_limit_table_name = rate_limit_table_name
         self._cache_details = cache_details
 
         self._cache = DiskCache("~/.cache3", name="flight-cloud-auth-manager.db")
