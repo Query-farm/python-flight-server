@@ -9,7 +9,7 @@ dependencies = [
     "structlog>=24.4.0",
     "pydantic>=2.9.2",
     "mypy-boto3-dynamodb>=1.35.24",
-    "boto3>=1.35.39",
+    "boto3>=1.35.0",
     "cache3>=0.4.3",
 ]
 readme = "README.md"

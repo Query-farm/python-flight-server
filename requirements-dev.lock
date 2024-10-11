@@ -50,7 +50,6 @@ markupsafe==3.0.1
     # via jinja2
     # via werkzeug
 moto==5.0.16
-    # via query-farm-server-base
 mypy==1.11.2
     # via pytest-mypy
 mypy-boto3-dynamodb==1.35.24

@@ -13,52 +13,23 @@
 annotated-types==0.7.0
     # via pydantic
 boto3==1.35.39
-    # via moto
     # via query-farm-server-base
 botocore==1.35.39
     # via boto3
-    # via moto
     # via s3transfer
 cache3==0.4.3
     # via query-farm-server-base
-certifi==2024.8.30
-    # via requests
-cffi==1.17.1
-    # via cryptography
-charset-normalizer==3.4.0
-    # via requests
-cryptography==43.0.1
-    # via moto
-idna==3.10
-    # via requests
-jinja2==3.1.4
-    # via moto
 jmespath==1.0.1
     # via boto3
     # via botocore
-markupsafe==3.0.1
-    # via jinja2
-    # via werkzeug
-moto==5.0.16
-    # via query-farm-server-base
 mypy-boto3-dynamodb==1.35.24
     # via query-farm-server-base
-pycparser==2.22
-    # via cffi
 pydantic==2.9.2
     # via query-farm-server-base
 pydantic-core==2.23.4
     # via pydantic
 python-dateutil==2.9.0.post0
     # via botocore
-    # via moto
-pyyaml==6.0.2
-    # via responses
-requests==2.32.3
-    # via moto
-    # via responses
-responses==0.25.3
-    # via moto
 s3transfer==0.10.3
     # via boto3
 six==1.16.0
@@ -70,9 +41,3 @@ typing-extensions==4.12.2
     # via pydantic-core
 urllib3==2.2.3
     # via botocore
-    # via requests
-    # via responses
-werkzeug==3.0.4
-    # via moto
-xmltodict==0.14.1
-    # via moto
