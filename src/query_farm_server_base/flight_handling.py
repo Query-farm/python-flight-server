@@ -5,6 +5,8 @@ from typing import Any, TypedDict
 
 import pyarrow.flight as flight
 import sqlglot
+import immutables
+import duckdb
 import structlog
 import zstandard as zstd
 from duckdb_query_tools import duckdb_serialized_expression, sql_statement_analyzer
@@ -105,3 +107,48 @@ def parse_filter_info(
         filter_sql_where_clause=filter_sql_where_clause,
         filter_types_as_sql=filter_types_as_sql,
     )
+
+
+def determine_unique_api_call_parameters(
+    parsed_filter_info: ParsedFilterInfo,
+    column_names_that_cannot_be_null: list[str],
+    addititional_parameter_generator_clauses: list[str],
+) -> list[dict[str, Any]]:
+    # So before we can do determine the calls, we need to determine the distinct values
+    # of each input parameters.
+
+    parameter_generator_clauses: list[str] = []
+    parameter_generator_parameters: list[Any] = []
+
+    if parsed_filter_info.filter_sql_where_clause is not None and parsed_filter_info.filter_sql_where_clause != "":
+        parameter_generator_clauses.append(parsed_filter_info.filter_sql_where_clause)
+
+    with duckdb.connect(":memory:") as connection:
+        parameter_field_names = []
+        for parameter_name, parameter_values in parsed_filter_info.parsed_parameter_values.items():
+            create_table_sql = f"CREATE TABLE parameter_{parameter_name} ({parameter_name} {parsed_filter_info.filter_types_as_sql[parameter_name]})"
+            connection.execute(create_table_sql)
+            parameter_field_names.append(parameter_name)
+            connection.executemany(
+                f"INSERT INTO parameter_{parameter_name} VALUES (?)",
+                [[i if not isinstance(i, immutables.Map) else {**i}] for i in parameter_values],
+            )
+
+            # Append the null value.
+            if parameter_name not in column_names_that_cannot_be_null:
+                connection.execute(f"INSERT INTO parameter_{parameter_name} VALUES (?)", [None])
+        joined_parameter_names = ",".join(parsed_filter_info.parsed_parameter_values)
+        joined_parameter_table_names = ",".join(map(lambda v: f"parameter_{v}", parameter_field_names))
+
+        parameter_generator_sql = f"select {joined_parameter_names} from {joined_parameter_table_names}"
+
+        parameter_generator_clauses.extend(addititional_parameter_generator_clauses)
+
+        if len(parameter_generator_clauses) > 0:
+            parameter_generator_sql += f" where {' and '.join(parameter_generator_clauses)}"
+
+        log.info("Parameter handling", parameter_generator_sql=parameter_generator_sql)
+        api_call_parameter_rows = connection.execute(parameter_generator_sql, parameter_generator_parameters).arrow()
+
+    return api_call_parameter_rows.to_pylist()
+    # Now that we have all of the parameter tables, lets get the actual values that can be specified.

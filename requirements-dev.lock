@@ -38,6 +38,7 @@ cryptography==43.0.1
     # via moto
 duckdb==1.1.1
     # via duckdb-query-tools
+    # via query-farm-server-base
 duckdb-query-tools @ git+https://github.com/Query-farm/duckdb-query-tools.git@65891e6598904ef9c167a634fb8009d56a398c2c
     # via query-farm-server-base
 execnet==2.1.1
@@ -48,6 +49,8 @@ fuzzywuzzy==0.18.0
     # via query-farm-server-base
 idna==3.10
     # via requests
+immutables==0.21
+    # via query-farm-server-base
 iniconfig==2.0.0
     # via pytest
 jinja2==3.1.4

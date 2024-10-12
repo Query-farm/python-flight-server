@@ -19,6 +19,8 @@ dependencies = [
     "fuzzywuzzy>=0.18.0",
     "duckdb-query-tools @ git+https://github.com/Query-farm/duckdb-query-tools.git@master",
     "sqlglot>=25.24.5",
+    "duckdb>=1.1.1",
+    "immutables>=0.21",
 ]
 readme = "README.md"
 requires-python = ">= 3.12"

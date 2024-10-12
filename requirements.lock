@@ -25,9 +25,12 @@ click==8.1.7
     # via query-farm-server-base
 duckdb==1.1.1
     # via duckdb-query-tools
+    # via query-farm-server-base
 duckdb-query-tools @ git+https://github.com/Query-farm/duckdb-query-tools.git@65891e6598904ef9c167a634fb8009d56a398c2c
     # via query-farm-server-base
 fuzzywuzzy==0.18.0
+    # via query-farm-server-base
+immutables==0.21
     # via query-farm-server-base
 jmespath==1.0.1
     # via boto3
