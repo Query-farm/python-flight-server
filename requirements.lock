@@ -23,6 +23,8 @@ certifi==2024.8.30
     # via sentry-sdk
 click==8.1.7
     # via query-farm-server-base
+fuzzywuzzy==0.18.0
+    # via query-farm-server-base
 jmespath==1.0.1
     # via boto3
     # via botocore
