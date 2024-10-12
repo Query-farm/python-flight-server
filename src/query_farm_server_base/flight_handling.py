@@ -110,6 +110,7 @@ def parse_filter_info(
 
 
 def determine_unique_api_call_parameters(
+    *,
     parsed_filter_info: ParsedFilterInfo,
     column_names_that_cannot_be_null: list[str],
     addititional_parameter_generator_clauses: list[str],
