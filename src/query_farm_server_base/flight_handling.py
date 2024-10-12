@@ -1,21 +1,21 @@
 import io
 import json
 import struct
-from typing import Any, TypedDict
+from dataclasses import dataclass
+from typing import Any
 
+import duckdb
+import immutables
 import pyarrow.flight as flight
 import sqlglot
-import immutables
-import duckdb
 import structlog
 import zstandard as zstd
 from duckdb_query_tools import duckdb_serialized_expression, sql_statement_analyzer
-from dataclasses import dataclass
 
 ticket_with_metadata_indicator = b"<TICKET_WITH_METADATA>"
 
 
-def decode_ticket_with_metadata(ticket: flight.Ticket) -> tuple[str, dict[str, list[str]]]:
+def decode_ticket_with_metadata(ticket: flight.Ticket) -> tuple[str, dict[str, list[Any]]]:
     """
     Decode a ticket that has embedded and compressed metadata.
     """
@@ -107,6 +107,30 @@ def parse_filter_info(
         filter_sql_where_clause=filter_sql_where_clause,
         filter_types_as_sql=filter_types_as_sql,
     )
+
+
+def handle_filter_data(
+    *, client_headers: dict[str, list[Any]], encoded_metadata: dict[str, list[Any]]
+) -> list[Any] | None:
+    filter_data = None
+    for key, value in encoded_metadata.items():
+        # TODO: fix this in the future, its kind of silly to dump as json, but the code further on expects it.
+        if key == "airport-duckdb-json-filters":
+            filter_data = value
+        else:
+            client_headers[key] = value
+
+    if filter_data is None:
+        filters_as_json = client_headers.get("airport-duckdb-json-filters", [])
+        if len(filters_as_json) > 1:
+            raise flight.FlightServerError(
+                "Only one filter is supported at this time, combine them into a single value."
+            )
+        elif len(filters_as_json) == 0:
+            filters_as_json = ["{}"]
+        filter_data = json.loads(filters_as_json[0])
+
+    return filter_data
 
 
 def determine_unique_api_call_parameters(
