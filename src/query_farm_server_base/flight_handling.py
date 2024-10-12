@@ -3,7 +3,8 @@ import json
 import struct
 
 import pyarrow.flight as flight
-import zstd
+
+import zstandard as zstd
 
 ticket_with_metadata_indicator = b"<TICKET_WITH_METADATA>"
 

@@ -15,7 +15,7 @@ dependencies = [
     "prettytable>=3.11.0",
     "pyarrow>=17.0.0",
     "sentry-sdk>=2.16.0",
-    "zstd>=1.5.5.1",
+    "zstandard>=0.23.0",
 ]
 readme = "README.md"
 requires-python = ">= 3.12"
