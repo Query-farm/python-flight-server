@@ -114,12 +114,12 @@ def determine_unique_api_call_parameters(
     parsed_filter_info: ParsedFilterInfo,
     column_names_that_cannot_be_null: list[str],
     addititional_parameter_generator_clauses: list[str],
+    parameter_generator_parameters: list[Any],
 ) -> list[dict[str, Any]]:
     # So before we can do determine the calls, we need to determine the distinct values
     # of each input parameters.
 
     parameter_generator_clauses: list[str] = []
-    parameter_generator_parameters: list[Any] = []
 
     if parsed_filter_info.filter_sql_where_clause is not None and parsed_filter_info.filter_sql_where_clause != "":
         parameter_generator_clauses.append(parsed_filter_info.filter_sql_where_clause)
