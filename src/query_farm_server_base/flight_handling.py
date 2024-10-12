@@ -15,9 +15,11 @@ from duckdb_query_tools import duckdb_serialized_expression, sql_statement_analy
 ticket_with_metadata_indicator = b"<TICKET_WITH_METADATA>"
 
 
-def decode_ticket_with_metadata(ticket: flight.Ticket) -> tuple[str, dict[str, list[Any]]]:
+def decode_ticket_with_metadata(ticket: flight.Ticket) -> tuple[str, dict[str, str]]:
     """
     Decode a ticket that has embedded and compressed metadata.
+
+    There is no concept of multiple headers handled here, headers are strings.
     """
     if (
         ticket.ticket[0 : min(len(ticket_with_metadata_indicator), len(ticket.ticket))]
@@ -35,14 +37,14 @@ def decode_ticket_with_metadata(ticket: flight.Ticket) -> tuple[str, dict[str, l
             raise flight.FlightUnavailableError("Decompressed Flight metadata is too large limit is 2mb.")
 
         metadata = stream.read()
-        parsed_headers: dict[str, list[str]] = {}
+        parsed_headers: dict[str, str] = {}
         try:
             # That metadata is zstd compressed, so we need to decompress it.
             decompressor = zstd.ZstdDecompressor()
             decompressed_metadata = decompressor.decompress(metadata)
             for key, value in json.loads(decompressed_metadata).items():
                 if key != "authorization":
-                    parsed_headers[key] = [value]
+                    parsed_headers[key] = value
         except Exception as e:
             raise flight.FlightUnavailableError("Unable to decompress metadata.") from e
         return decoded_ticket, parsed_headers
@@ -110,15 +112,17 @@ def parse_filter_info(
 
 
 def handle_filter_data(
-    *, client_headers: dict[str, list[Any]], encoded_metadata: dict[str, list[Any]]
-) -> list[Any] | None:
+    *, client_headers: dict[str, list[str]], encoded_metadata: dict[str, str]
+) -> dict[str, Any] | None:
     filter_data = None
     for key, value in encoded_metadata.items():
-        # TODO: fix this in the future, its kind of silly to dump as json, but the code further on expects it.
         if key == "airport-duckdb-json-filters":
-            filter_data = value
+            filter_data = json.loads(value)
         else:
-            client_headers[key] = value
+            # The encoded metadata could want to populate more than just the
+            # json filters header, but since client headers are multi-valued deal
+            # with this.
+            client_headers[key] = [value]
 
     if filter_data is None:
         filters_as_json = client_headers.get("airport-duckdb-json-filters", [])
@@ -127,8 +131,9 @@ def handle_filter_data(
                 "Only one filter is supported at this time, combine them into a single value."
             )
         elif len(filters_as_json) == 0:
-            filters_as_json = ["{}"]
-        filter_data = json.loads(filters_as_json[0])
+            filter_data = {}
+        else:
+            filter_data = json.loads(filters_as_json[0])
 
     return filter_data
 
