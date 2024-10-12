@@ -122,3 +122,5 @@ werkzeug==3.0.4
     # via moto
 xmltodict==0.14.1
     # via moto
+zstd==1.5.5.1
+    # via query-farm-server-base

@@ -56,3 +56,5 @@ urllib3==2.2.3
     # via sentry-sdk
 wcwidth==0.2.13
     # via prettytable
+zstd==1.5.5.1
+    # via query-farm-server-base
