@@ -8,6 +8,7 @@ import sqlglot
 import structlog
 import zstandard as zstd
 from duckdb_query_tools import duckdb_serialized_expression, sql_statement_analyzer
+from dataclasses import dataclass
 
 ticket_with_metadata_indicator = b"<TICKET_WITH_METADATA>"
 
@@ -48,7 +49,8 @@ def decode_ticket_with_metadata(ticket: flight.Ticket) -> tuple[str, dict[str, l
         return decoded_ticket, {}
 
 
-class ParsedFilterInfo(TypedDict):
+@dataclass
+class ParsedFilterInfo:
     parsed_parameter_values: dict[str, list[Any]]
     filter_sql_where_clause: str | None
     filter_types_as_sql: dict[str, str]
