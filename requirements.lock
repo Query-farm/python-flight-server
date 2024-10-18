@@ -26,7 +26,7 @@ click==8.1.7
 duckdb==1.1.1
     # via duckdb-query-tools
     # via query-farm-server-base
-duckdb-query-tools @ git+https://github.com/Query-farm/duckdb-query-tools.git@65891e6598904ef9c167a634fb8009d56a398c2c
+duckdb-query-tools @ git+https://github.com/Query-farm/duckdb-query-tools.git@74a7ddf50ad13c6716c53f5024eb6fa40295b908
     # via query-farm-server-base
 fuzzywuzzy==0.18.0
     # via query-farm-server-base
@@ -35,6 +35,8 @@ immutables==0.21
 jmespath==1.0.1
     # via boto3
     # via botocore
+levenshtein==0.26.0
+    # via python-levenshtein
 mypy-boto3-dynamodb==1.35.24
     # via query-farm-server-base
 numpy==2.1.2
@@ -49,6 +51,10 @@ pydantic-core==2.23.4
     # via pydantic
 python-dateutil==2.9.0.post0
     # via botocore
+python-levenshtein==0.26.0
+    # via query-farm-server-base
+rapidfuzz==3.10.0
+    # via levenshtein
 s3transfer==0.10.3
     # via boto3
 sentry-sdk==2.16.0
