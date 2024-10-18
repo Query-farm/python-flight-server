@@ -39,7 +39,7 @@ cryptography==43.0.1
 duckdb==1.1.1
     # via duckdb-query-tools
     # via query-farm-server-base
-duckdb-query-tools @ git+https://github.com/Query-farm/duckdb-query-tools.git@74a7ddf50ad13c6716c53f5024eb6fa40295b908
+duckdb-query-tools @ git+https://github.com/Query-farm/duckdb-query-tools.git@d4fa8bba4f0f2593d09d1f263986928a7a74ed72
     # via query-farm-server-base
 execnet==2.1.1
     # via pytest-xdist
