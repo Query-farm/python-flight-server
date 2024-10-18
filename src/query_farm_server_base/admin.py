@@ -81,9 +81,23 @@ def build(
         usage = [RateLimitCount(**i) for i in records]
 
         t = PrettyTable()
-        t.field_names = ["Account ID", "YYYY-MMM", "Request Count", "Request Seconds", "Transferred Bytes"]
+        t.field_names = [
+            "Account ID",
+            "YYYY-MMM",
+            "Request Count",
+            "Request Seconds",
+            "Transferred Bytes",
+        ]
         for u in usage:
-            t.add_row([u.account_id, u.yyyymm, u.request_count, u.request_seconds, u.transferred_bytes])
+            t.add_row(
+                [
+                    u.account_id,
+                    u.yyyymm,
+                    u.request_count,
+                    u.request_seconds,
+                    u.transferred_bytes,
+                ]
+            )
         print(t)
 
     @click.command(help="Get an account")
@@ -109,4 +123,4 @@ def build(
     cli.add_command(list_tokens)
     cli.add_command(create_token)
     cli.add_command(usage_by_account)
-    return cli()
+    return cli
