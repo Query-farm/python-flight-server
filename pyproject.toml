@@ -22,6 +22,7 @@ dependencies = [
     "duckdb>=1.1.1",
     "immutables>=0.21",
     "python-levenshtein>=0.26.0",
+    "mypy-boto3-s3>=1.35.42",
 ]
 readme = "README.md"
 requires-python = ">= 3.12"

@@ -39,6 +39,8 @@ levenshtein==0.26.0
     # via python-levenshtein
 mypy-boto3-dynamodb==1.35.24
     # via query-farm-server-base
+mypy-boto3-s3==1.35.42
+    # via query-farm-server-base
 numpy==2.1.2
     # via pyarrow
 prettytable==3.11.0

@@ -1,10 +1,6 @@
 import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
-
-from mypy_boto3_dynamodb.type_defs import (
-    TableAttributeValueTypeDef,
-)
 from pydantic import BaseModel, ConfigDict, Field
 
 
