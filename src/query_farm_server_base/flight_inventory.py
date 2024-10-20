@@ -85,9 +85,9 @@ def upload_and_generate_schema_list(
             serialized_schema_data.append(
                 {
                     "schema": schema_name,
-                    "description": schema_details[schema_name].description,
+                    "description": schema_details[schema_name].description if schema_name in schema_details else "",
                     "contents": {"url": schema_path, "sha256": uploaded_schema_contents.sha256_hash},
-                    "tags": schema_details[schema_name].tags,
+                    "tags": schema_details[schema_name].tags if schema_name in schema_details else {},
                 }
             )
 
