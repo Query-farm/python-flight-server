@@ -57,11 +57,14 @@ def upload_and_generate_schema_list(
             packed_flight_info = b""
             for flight_info, _metadata in schema_items:
                 serialized_flight_info = flight_info.serialize()
-                packed_flight_info += struct.pack("<I", len(serialized_flight_info)) + serialized_flight_info
+                packed_flight_info += (
+                    struct.pack("<I", len(serialized_flight_info))
+                    + serialized_flight_info
+                )
 
             # Compress everything with zstd, store the uncompressed length in a 64-bit integer
             # followed by the compressed data.
-            log.info(f"Uploading schema for {schema_name}")
+            log.info(f"Uploading schema for {schema_name}", skip_upload=skip_upload)
             uploaded_schema_contents = schema_uploader.upload(
                 s3_client=s3_client,
                 data=packed_flight_info,
@@ -85,9 +88,16 @@ def upload_and_generate_schema_list(
             serialized_schema_data.append(
                 {
                     "schema": schema_name,
-                    "description": schema_details[schema_name].description if schema_name in schema_details else "",
-                    "contents": {"url": schema_path, "sha256": uploaded_schema_contents.sha256_hash},
-                    "tags": schema_details[schema_name].tags if schema_name in schema_details else {},
+                    "description": schema_details[schema_name].description
+                    if schema_name in schema_details
+                    else "",
+                    "contents": {
+                        "url": schema_path,
+                        "sha256": uploaded_schema_contents.sha256_hash,
+                    },
+                    "tags": schema_details[schema_name].tags
+                    if schema_name in schema_details
+                    else {},
                 }
             )
 
