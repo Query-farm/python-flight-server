@@ -86,7 +86,6 @@ def upload_and_generate_schema_list(
                 + uploaded_schema_contents.compressed_data
             )
 
-            print("ADding schema")
             serialized_schema_data.append(
                 {
                     "schema": schema_name,
@@ -113,9 +112,6 @@ def upload_and_generate_schema_list(
         skip_upload=skip_upload,
     )
     all_schema_path = f"{SCHEMA_BASE_URL}/{all_schema_contents_upload.s3_path}"
-
-    log.info(f"All schemas path: {all_schema_path}")
-    log.info("Total schemas uploaded", count=len(serialized_schema_data))
 
     schemas_list_data = {
             "schemas": serialized_schema_data,
