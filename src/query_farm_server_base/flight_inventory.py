@@ -48,7 +48,7 @@ def upload_and_generate_schema_list(
 ) -> list[bytes]:
     serialized_schema_data: list[dict[str, Any]] = []
     s3_client = boto3.client("s3")
-    all_schema_flights_with_length_serialized: list[tuple[str, bytes]] = []
+    all_schema_flights_with_length_serialized: list[dict[str, Any]] = []
 
     for catalog_name, schema_names in flight_inventory.items():
         for schema_name, schema_items in schema_names.items():
@@ -79,7 +79,12 @@ def upload_and_generate_schema_list(
 
             assert uploaded_schema_contents.compressed_data
 
-            all_schema_flights_with_length_serialized.append((uploaded_schema_contents.sha256_hash, uploaded_schema_contents.compressed_data))
+            all_schema_flights_with_length_serialized.append(
+                {
+                    "sha256": uploaded_schema_contents.sha256_hash,
+                    "contents": uploaded_schema_contents.compressed_data,
+                }
+            )
 
             # all_schema_flights_with_length_serialized += (
             #     struct.pack("<I", len(uploaded_schema_contents.sha256_hash))
@@ -116,13 +121,13 @@ def upload_and_generate_schema_list(
     all_schema_path = f"{SCHEMA_BASE_URL}/{all_schema_contents_upload.s3_path}"
 
     schemas_list_data = {
-            "schemas": serialized_schema_data,
-            # This encodes the contents of all schemas in one file.
-            "contents": {
-                "url": all_schema_path,
-                "sha256": all_schema_contents_upload.sha256_hash,
-                "serialized": None,
-            },
+        "schemas": serialized_schema_data,
+        # This encodes the contents of all schemas in one file.
+        "contents": {
+            "url": all_schema_path,
+            "sha256": all_schema_contents_upload.sha256_hash,
+            "serialized": None,
+        },
     }
 
     packed_data = msgpack.packb(schemas_list_data)
