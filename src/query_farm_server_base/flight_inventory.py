@@ -110,9 +110,12 @@ def upload_and_generate_schema_list(
                 }
             )
 
+    print("Doing pack");
+    all_packed = msgpack.packb(all_schema_flights_with_length_serialized)
+    print(all_packed)
     all_schema_contents_upload = schema_uploader.upload(
         s3_client=s3_client,
-        data=msgpack.packb(all_schema_flights_with_length_serialized),
+        data=all_packed,
         key_prefix=f"schemas/{flight_service_name}",
         bucket=SCHEMA_BUCKET_NAME,
         compression_level=None,  # Don't compress since all contained schemas are compressed
