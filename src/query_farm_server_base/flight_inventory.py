@@ -7,6 +7,7 @@ import boto3
 import pyarrow as pa
 import pyarrow.flight as flight
 import structlog
+import msgpack
 import zstandard as zstd
 
 from . import schema_uploader
@@ -113,16 +114,15 @@ def upload_and_generate_schema_list(
 
     log.info(f"All schemas path: {all_schema_path}")
 
-    schemas_list_data = json.dumps(
-        {
+    schemas_list_data = {
             "schemas": serialized_schema_data,
             # This encodes the contents of all schemas in one file.
             "contents": {
                 "url": all_schema_path,
                 "sha256": all_schema_contents_upload.sha256_hash,
             },
-        }
-    ).encode("utf8")
+    }
+
     compressor = zstd.ZstdCompressor(level=SCHEMA_TOP_LEVEL_COMPRESSION_LEVEL)
-    compressed_data = compressor.compress(schemas_list_data)
+    compressed_data = compressor.compress(msgpack.packb(schemas_list_data))
     return [struct.pack("<I", len(schemas_list_data)), compressed_data]
