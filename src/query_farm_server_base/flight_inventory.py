@@ -95,6 +95,7 @@ def upload_and_generate_schema_list(
                     "contents": {
                         "url": schema_path,
                         "sha256": uploaded_schema_contents.sha256_hash,
+                        "serialized": None,
                     },
                     "tags": schema_details[schema_name].tags
                     if schema_name in schema_details
@@ -120,6 +121,7 @@ def upload_and_generate_schema_list(
             "contents": {
                 "url": all_schema_path,
                 "sha256": all_schema_contents_upload.sha256_hash,
+                "serialized": None,
             },
     }
 
