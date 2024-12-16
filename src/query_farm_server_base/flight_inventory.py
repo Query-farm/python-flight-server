@@ -126,6 +126,7 @@ def upload_and_generate_schema_list(
     }
 
     packed_data = msgpack.packb(schemas_list_data)
+    print(packed_data)
 
     compressor = zstd.ZstdCompressor(level=SCHEMA_TOP_LEVEL_COMPRESSION_LEVEL)
     compressed_data = compressor.compress(packed_data)
