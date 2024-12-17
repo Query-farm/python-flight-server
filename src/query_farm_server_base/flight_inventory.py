@@ -52,16 +52,8 @@ def upload_and_generate_schema_list(
 
     for catalog_name, schema_names in flight_inventory.items():
         for schema_name, schema_items in schema_names.items():
-            # Accumulate all of the serialized flight info(s) into a buffer where the length
-            # of the serialized flight info is stored in a 64-bit integer followed by the serialized
-            # flight info.
-            packed_flight_info = b""
-            for flight_info, _metadata in schema_items:
-                serialized_flight_info = flight_info.serialize()
-                packed_flight_info += (
-                    struct.pack("<I", len(serialized_flight_info))
-                    + serialized_flight_info
-                )
+            # Serialize all of the FlightInfo into an array.
+            packed_flight_info = msgpack.packb([flight_info.serialize() for flight_info, _metadata in schema_items])
 
             # Compress everything with zstd, store the uncompressed length in a 64-bit integer
             # followed by the compressed data.
@@ -93,10 +85,9 @@ def upload_and_generate_schema_list(
                     if schema_name in schema_details
                     else "",
                     "contents": {
-                        "url": "",
-#                        "url": schema_path,
+                        "url": schema_path,
                         "sha256": uploaded_schema_contents.sha256_hash,
-                        "serialized": uploaded_schema_contents.compressed_data,
+                        "serialized": None,
                     },
                     "tags": schema_details[schema_name].tags
                     if schema_name in schema_details
@@ -116,8 +107,7 @@ def upload_and_generate_schema_list(
     all_schema_path = f"{SCHEMA_BASE_URL}/{all_schema_contents_upload.s3_path}"
 
     schemas_list_data = {
-        #"schemas": serialized_schema_data,
-        "schemas": [],
+        "schemas": serialized_schema_data,
         # This encodes the contents of all schemas in one file.
         "contents": {
              "url": all_schema_path,
@@ -127,8 +117,6 @@ def upload_and_generate_schema_list(
     }
 
     packed_data = msgpack.packb(schemas_list_data)
-    print(packed_data)
-    print("Finshed")
 
     compressor = zstd.ZstdCompressor(level=SCHEMA_TOP_LEVEL_COMPRESSION_LEVEL)
     compressed_data = compressor.compress(packed_data)
