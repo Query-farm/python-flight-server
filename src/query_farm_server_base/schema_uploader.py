@@ -59,7 +59,7 @@ def upload(
             Bucket=bucket,
             Key=s3_path,
             ACL="public-read",
-            CacheControl=CACHE_CONTROL,
+#            CacheControl=CACHE_CONTROL,
         )
 
     return UploadResult(sha256_hash=sha256_hash, s3_path=s3_path, compressed_data=data)

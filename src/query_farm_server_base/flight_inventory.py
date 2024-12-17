@@ -86,13 +86,6 @@ def upload_and_generate_schema_list(
                 ]
             )
 
-            # all_schema_flights_with_length_serialized += (
-            #     struct.pack("<I", len(uploaded_schema_contents.sha256_hash))
-            #     + uploaded_schema_contents.sha256_hash.encode("utf8")
-            #     + struct.pack("<I", len(uploaded_schema_contents.compressed_data))
-            #     + uploaded_schema_contents.compressed_data
-            # )
-
             serialized_schema_data.append(
                 {
                     "schema": schema_name,
@@ -100,9 +93,10 @@ def upload_and_generate_schema_list(
                     if schema_name in schema_details
                     else "",
                     "contents": {
-                        "url": schema_path,
+                        "url": "",
+#                        "url": schema_path,
                         "sha256": uploaded_schema_contents.sha256_hash,
-                        "serialized": None,
+                        "serialized": uploaded_schema_contents.compressed_data,
                     },
                     "tags": schema_details[schema_name].tags
                     if schema_name in schema_details
@@ -110,9 +104,7 @@ def upload_and_generate_schema_list(
                 }
             )
 
-    print("Doing pack");
     all_packed = msgpack.packb(all_schema_flights_with_length_serialized)
-    print(all_packed)
     all_schema_contents_upload = schema_uploader.upload(
         s3_client=s3_client,
         data=all_packed,
@@ -124,17 +116,19 @@ def upload_and_generate_schema_list(
     all_schema_path = f"{SCHEMA_BASE_URL}/{all_schema_contents_upload.s3_path}"
 
     schemas_list_data = {
-        "schemas": serialized_schema_data,
+        #"schemas": serialized_schema_data,
+        "schemas": [],
         # This encodes the contents of all schemas in one file.
         "contents": {
-            "url": all_schema_path,
-            "sha256": all_schema_contents_upload.sha256_hash,
-            "serialized": None,
+             "url": all_schema_path,
+             "sha256": all_schema_contents_upload.sha256_hash,
+             "serialized": None,
         },
     }
 
     packed_data = msgpack.packb(schemas_list_data)
     print(packed_data)
+    print("Finshed")
 
     compressor = zstd.ZstdCompressor(level=SCHEMA_TOP_LEVEL_COMPRESSION_LEVEL)
     compressed_data = compressor.compress(packed_data)
