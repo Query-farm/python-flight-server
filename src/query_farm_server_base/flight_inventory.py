@@ -45,6 +45,8 @@ def upload_and_generate_schema_list(
     flight_inventory: dict[str, dict[str, list[FlightInventoryWithMetadata]]],
     schema_details: dict[str, SchemaInfo],
     skip_upload: bool,
+    enable_sha256_caching: bool = True,
+    serialize_inline: bool = False,
 ) -> list[bytes]:
     serialized_schema_data: list[dict[str, Any]] = []
     s3_client = boto3.client("s3")
@@ -64,7 +66,7 @@ def upload_and_generate_schema_list(
                 compression_level=SCHEMA_COMPRESSION_LEVEL,
                 key_prefix=f"schemas/{flight_service_name}/{catalog_name}",
                 bucket=SCHEMA_BUCKET_NAME,
-                skip_upload=skip_upload,
+                skip_upload=skip_upload or serialize_inline,
             )
 
             schema_path = f"{SCHEMA_BASE_URL}/{uploaded_schema_contents.s3_path}"
@@ -85,8 +87,8 @@ def upload_and_generate_schema_list(
                     if schema_name in schema_details
                     else "",
                     "contents": {
-                        "url": schema_path,
-                        "sha256": uploaded_schema_contents.sha256_hash,
+                        "url": schema_path if not serialize_inline else None,
+                        "sha256": uploaded_schema_contents.sha256_hash if enable_sha256_caching else None,
                         "serialized": None,
                     },
                     "tags": schema_details[schema_name].tags
@@ -102,7 +104,7 @@ def upload_and_generate_schema_list(
         key_prefix=f"schemas/{flight_service_name}",
         bucket=SCHEMA_BUCKET_NAME,
         compression_level=None,  # Don't compress since all contained schemas are compressed
-        skip_upload=skip_upload,
+        skip_upload=skip_upload or serialize_inline,
     )
     all_schema_path = f"{SCHEMA_BASE_URL}/{all_schema_contents_upload.s3_path}"
 
@@ -110,14 +112,13 @@ def upload_and_generate_schema_list(
         "schemas": serialized_schema_data,
         # This encodes the contents of all schemas in one file.
         "contents": {
-             "url": all_schema_path,
-             "sha256": all_schema_contents_upload.sha256_hash,
-             "serialized": None,
+             "url": all_schema_path if not serialize_inline else None,
+             "sha256": all_schema_contents_upload.sha256_hash if enable_sha256_caching else None,
+             "serialized": all_schema_contents_upload.compressed_data if serialize_inline else None,
         },
     }
 
     packed_data = msgpack.packb(schemas_list_data)
-
     compressor = zstd.ZstdCompressor(level=SCHEMA_TOP_LEVEL_COMPRESSION_LEVEL)
     compressed_data = compressor.compress(packed_data)
     return [struct.pack("<I", len(packed_data)), compressed_data]
