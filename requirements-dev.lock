@@ -39,7 +39,7 @@ cryptography==43.0.1
 duckdb==1.1.1
     # via duckdb-query-tools
     # via query-farm-server-base
-duckdb-query-tools @ git+https://github.com/Query-farm/duckdb-query-tools.git@d4fa8bba4f0f2593d09d1f263986928a7a74ed72
+duckdb-query-tools @ git+https://github.com/Query-farm/duckdb-query-tools.git@61b29c19a585a9ca8fe43eae6485f23f312d4144
     # via query-farm-server-base
 execnet==2.1.1
     # via pytest-xdist
@@ -64,6 +64,8 @@ markupsafe==3.0.1
     # via jinja2
     # via werkzeug
 moto==5.0.16
+msgpack==1.1.0
+    # via query-farm-server-base
 mypy==1.11.2
     # via pytest-mypy
 mypy-boto3-dynamodb==1.35.24
