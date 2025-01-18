@@ -1,13 +1,13 @@
 import json
 import struct
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
 
 import boto3
+import msgpack
 import pyarrow as pa
 import pyarrow.flight as flight
 import structlog
-import msgpack
 import zstandard as zstd
 
 from . import schema_uploader
@@ -37,6 +37,38 @@ STANDARD_WRITE_OPTIONS = pa.ipc.IpcWriteOptions(
 class SchemaInfo:
     description: str
     tags: dict[str, Any]
+
+
+class FlightSchemaMetadata:
+    def __init__(
+        self,
+        *,
+        type: Literal["scalar_function", "table"],
+        catalog: str,
+        schema: str,
+        name: str,
+        comment: str | None,
+        input_schema: pa.Schema,
+    ):
+        self.type = type
+        self.catalog = catalog
+        self.schema = schema
+        self.name = name
+        self.comment = comment
+        self.input_schema = input_schema
+
+    def serialize(self) -> bytes:
+        values_to_pack = {
+            "type": self.type,
+            "catalog": self.catalog,
+            "schema": self.schema,
+            "name": self.name,
+            "comment": self.comment,
+        }
+        if self.input_schema:
+            values_to_pack["input_schema"] = self.input_schema.serialize()
+
+        return msgpack.packb(values_to_pack)
 
 
 def upload_and_generate_schema_list(
@@ -83,17 +115,13 @@ def upload_and_generate_schema_list(
             serialized_schema_data.append(
                 {
                     "schema": schema_name,
-                    "description": schema_details[schema_name].description
-                    if schema_name in schema_details
-                    else "",
+                    "description": schema_details[schema_name].description if schema_name in schema_details else "",
                     "contents": {
                         "url": schema_path if not serialize_inline else None,
                         "sha256": uploaded_schema_contents.sha256_hash if enable_sha256_caching else None,
                         "serialized": None,
                     },
-                    "tags": schema_details[schema_name].tags
-                    if schema_name in schema_details
-                    else {},
+                    "tags": schema_details[schema_name].tags if schema_name in schema_details else {},
                 }
             )
 
@@ -112,9 +140,9 @@ def upload_and_generate_schema_list(
         "schemas": serialized_schema_data,
         # This encodes the contents of all schemas in one file.
         "contents": {
-             "url": all_schema_path if not serialize_inline else None,
-             "sha256": all_schema_contents_upload.sha256_hash if enable_sha256_caching else None,
-             "serialized": all_schema_contents_upload.compressed_data if serialize_inline else None,
+            "url": all_schema_path if not serialize_inline else None,
+            "sha256": all_schema_contents_upload.sha256_hash if enable_sha256_caching else None,
+            "serialized": all_schema_contents_upload.compressed_data if serialize_inline else None,
         },
     }
 
