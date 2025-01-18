@@ -165,7 +165,6 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AuthManager]):
         )
 
         logger.info("do_exchange")
-        breakpoint()
 
         return self.impl_do_exchange(
             context=context,
