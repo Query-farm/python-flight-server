@@ -66,7 +66,7 @@ class FlightSchemaMetadata:
             "comment": self.comment,
         }
         if self.input_schema:
-            values_to_pack["input_schema"] = self.input_schema.serialize()
+            values_to_pack["input_schema"] = self.input_schema.serialize().to_pybytes()
 
         return msgpack.packb(values_to_pack)
 
