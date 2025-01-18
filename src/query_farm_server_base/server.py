@@ -148,7 +148,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AuthManager]):
         calling_token: auth.AccountToken,
         logger: structlog.BoundLogger,
     ) -> None:
-        raise NotImplementedError("do_do_exchange not implemented")
+        raise NotImplementedError("impl_do_exchange not implemented")
 
     def do_exchange(
         self,
