@@ -21,6 +21,7 @@ AuthManager = TypeVar("AuthManager", bound=auth_manager.AuthManager[auth.Account
 class BasicFlightServer(flight.FlightServerBase, Generic[AuthManager]):
     def __init__(
         self,
+        *,
         location: str | None,
         auth_manager: AuthManager,
         **kwargs: dict[str, Any],
