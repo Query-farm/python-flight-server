@@ -1,16 +1,20 @@
 from collections.abc import Iterator
-from typing import Any
+from typing import Any, Generic, TypeVar
 
 import pyarrow.flight as flight
 import structlog
 
-from . import auth, auth_manager, middleware
+from . import auth, middleware
 
 log = structlog.get_logger()
 
 
-class Caller:
-    def __init__(self, *, account: auth.Account, token: auth.AccountToken) -> None:
+AccountType = TypeVar("AccountType", bound=auth.Account)
+TokenType = TypeVar("TokenType", bound=auth.AccountToken)
+
+
+class Caller(Generic[AccountType, TokenType]):
+    def __init__(self, *, account: AccountType, token: TokenType) -> None:
         self.account = account
         self.token = token
 
