@@ -20,12 +20,9 @@ class BasicFlightServer(flight.FlightServerBase):
         self,
         *,
         location: str | None,
-        auth_manager: auth_manager.AuthManager[auth.Account, auth.AccountToken],
         **kwargs: dict[str, Any],
     ) -> None:
         self._location = location
-        self._auth_manager = auth_manager
-
         super().__init__(location, **kwargs)
 
     def auth_middleware(
@@ -232,23 +229,3 @@ class BasicFlightServer(flight.FlightServerBase):
             reader=reader,
             writer=writer,
         )
-
-    @staticmethod
-    def run_server(
-        cls: type["BasicFlightServer"],
-        *,
-        location: str,
-        auth_manager: auth_manager.AuthManager[auth.Account, auth.AccountToken],
-        **kwargs: dict[str, Any],
-    ) -> None:
-        log.info("Starting server", location=location)
-
-        server = cls(
-            middleware={
-                "headers": middleware.SaveHeadersMiddlewareFactory(),
-                "auth": middleware.AuthManagerMiddlewareFactory(auth_manager=auth_manager),
-            },
-            location=location,
-            auth_manager=auth_manager,
-        )
-        server.serve()
