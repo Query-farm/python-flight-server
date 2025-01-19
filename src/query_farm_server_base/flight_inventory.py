@@ -11,8 +11,6 @@ import zstandard as zstd
 
 from . import schema_uploader
 
-FlightInventoryWithMetadata = tuple[flight.FlightInfo, dict[str, Any]]
-
 log = structlog.get_logger()
 
 SCHEMA_BASE_URL = "https://schemas.beta.database.flights"
@@ -80,6 +78,9 @@ class FlightSchemaMetadata:
             values_to_pack["input_schema"] = self.input_schema.serialize().to_pybytes()
 
         return msgpack.packb(values_to_pack)
+
+
+FlightInventoryWithMetadata = tuple[flight.FlightInfo, FlightSchemaMetadata]
 
 
 def upload_and_generate_schema_list(
