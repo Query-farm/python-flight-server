@@ -59,7 +59,7 @@ class FlightSchemaMetadata:
         schema: str,
         name: str,
         comment: str | None,
-        input_schema: pa.Schema,
+        input_schema: pa.Schema | None = None,
     ):
         self.type = type
         self.catalog = catalog
