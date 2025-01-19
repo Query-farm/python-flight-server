@@ -199,6 +199,42 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AuthManager]):
             caller=caller,
         )
 
+    def impl_do_put(
+        self,
+        *,
+        context: flight.ServerCallContext,
+        caller: Caller,
+        logger: structlog.BoundLogger,
+        descriptor: flight.FlightDescriptor,
+        reader: flight.MetadataRecordBatchReader,
+        writer: flight.FlightMetadataWriter,
+    ) -> None:
+        raise NotImplementedError("impl_do_put not implemented")
+
+    def do_put(
+        self,
+        context: flight.ServerCallContext,
+        descriptor: flight.FlightDescriptor,
+        reader: flight.MetadataRecordBatchReader,
+        writer: flight.FlightMetadataWriter,
+    ) -> None:
+        caller = self.caller_from_context_(context)
+
+        logger = log.bind(
+            **self.auth_logging_items(context, caller),
+        )
+
+        logger.info("do_put", descriptor=descriptor)
+
+        return self.impl_do_put(
+            context=context,
+            logger=logger,
+            caller=caller,
+            descriptor=descriptor,
+            reader=reader,
+            writer=writer,
+        )
+
     @staticmethod
     def run_server(
         cls: type["BasicFlightServer[AuthManager]"],
