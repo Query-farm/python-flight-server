@@ -1,5 +1,5 @@
 from collections.abc import Iterator
-from typing import Any, Generic, TypeVar
+from typing import Any
 
 import pyarrow.flight as flight
 import structlog
@@ -15,19 +15,15 @@ class Caller:
         self.token = token
 
 
-AuthManager = TypeVar("AuthManager", bound=auth_manager.AuthManager[auth.Account, auth.AccountToken])
-
-
-class BasicFlightServer(flight.FlightServerBase, Generic[AuthManager]):
+class BasicFlightServer(flight.FlightServerBase):
     def __init__(
         self,
         *,
         location: str | None,
-        auth_manager: AuthManager,
+        auth_manager: auth_manager.AuthManager[auth.Account, auth.AccountToken],
         **kwargs: dict[str, Any],
     ) -> None:
         self._location = location
-        self._auth_manager = auth_manager
 
         super().__init__(location, **kwargs)
 
@@ -238,10 +234,11 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AuthManager]):
 
     @staticmethod
     def run_server(
-        cls: type["BasicFlightServer[AuthManager]"],
+        cls: type["BasicFlightServer"],
         *,
         location: str,
-        auth_manager: AuthManager,
+        auth_manager: auth_manager.AuthManager[auth.Account, auth.AccountToken],
+        **kwargs: dict[str, Any],
     ) -> None:
         log.info("Starting server", location=location)
 
