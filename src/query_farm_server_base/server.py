@@ -24,6 +24,7 @@ class BasicFlightServer(flight.FlightServerBase):
         **kwargs: dict[str, Any],
     ) -> None:
         self._location = location
+        self._auth_manager = auth_manager
 
         super().__init__(location, **kwargs)
 
