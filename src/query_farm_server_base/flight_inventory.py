@@ -52,11 +52,12 @@ class FlightSchemaMetadata:
     def __init__(
         self,
         *,
-        type: Literal["scalar_function", "table"],
+        type: Literal["scalar_function", "table", "table_function"],
         catalog: str,
         schema: str,
         name: str,
         comment: str | None,
+        action_name: str | None = None,
         input_schema: pa.Schema | None = None,
     ):
         self.type = type
@@ -65,6 +66,7 @@ class FlightSchemaMetadata:
         self.name = name
         self.comment = comment
         self.input_schema = input_schema
+        self.action_name = action_name
 
     def serialize(self) -> bytes:
         values_to_pack = {
@@ -73,6 +75,7 @@ class FlightSchemaMetadata:
             "schema": self.schema,
             "name": self.name,
             "comment": self.comment,
+            "action_name": self.action_name,
         }
         if self.input_schema:
             values_to_pack["input_schema"] = self.input_schema.serialize().to_pybytes()
