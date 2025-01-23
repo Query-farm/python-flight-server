@@ -22,6 +22,19 @@ ticket_with_metadata_indicator = b"<TICKET_WITH_METADATA>"
 class FlightTicketData(BaseModel):
     flight_name: str
 
+    @staticmethod
+    def unpack(src: bytes) -> "FlightTicketData":
+        decode_fields = {"flight_name"}
+        unpacked = msgpack.unpackb(
+            src,
+            raw=True,
+            object_hook=lambda s: {
+                k.decode("utf8"): v.decode("utf8") if k.decode("utf8") in decode_fields else v for k, v in s.items()
+            },
+        )
+
+        return FlightTicketData.model_validate(unpacked)
+
 
 T = TypeVar("T", bound=FlightTicketData)
 
@@ -59,7 +72,7 @@ def endpoint(*, ticket_data: T, allow_metadata: bool) -> flight.FlightEndpoint:
     )
 
 
-def decode_ticket(*, ticket: flight.Ticket, model_selector: Callable[[str], type[T]]) -> tuple[T, dict[str, str]]:
+def decode_ticket(*, ticket: flight.Ticket, model_selector: Callable[[str, bytes], T]) -> tuple[T, dict[str, str]]:
     """
     Decode a ticket that has embedded and compressed metadata.
 
@@ -78,11 +91,8 @@ def decode_ticket(*, ticket: flight.Ticket, model_selector: Callable[[str], type
         # The ticket itself is a msgpack message.
         msgpack_ticket_contents = stream.read(ticket_data_length)
 
-        basic_data = FlightTicketData.model_validate(msgpack_ticket_contents)
-
-        decoded_ticket_data = model_selector(basic_data.flight_name).model_validate(
-            msgpack.unpackb(msgpack_ticket_contents, raw=False)
-        )
+        basic_data = FlightTicketData.unpack(msgpack_ticket_contents)
+        decoded_ticket_data = model_selector(basic_data.flight_name, msgpack_ticket_contents)
 
         metadata_decompressed_length = struct.unpack("<I", stream.read(4))[0]
         if metadata_decompressed_length > 1024 * 1024 * 2:
@@ -101,7 +111,8 @@ def decode_ticket(*, ticket: flight.Ticket, model_selector: Callable[[str], type
             raise flight.FlightUnavailableError("Unable to decompress metadata.") from e
         return decoded_ticket_data, parsed_headers
     else:
-        decoded_ticket_data = msgpack.unpackb(ticket.ticket)
+        basic_data = FlightTicketData.unpack(ticket.ticket)
+        decoded_ticket_data = model_selector(basic_data.flight_name, ticket.ticket)
         return decoded_ticket_data, {}
 
 
