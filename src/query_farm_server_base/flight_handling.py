@@ -2,20 +2,30 @@ import io
 import json
 import struct
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, TypeVar
 
 import duckdb
 import immutables
+import msgpack
 import pyarrow.flight as flight
 import sqlglot
 import structlog
+
+from pydantic import BaseModel
 import zstandard as zstd
 from duckdb_query_tools import duckdb_serialized_expression, sql_statement_analyzer
 
 ticket_with_metadata_indicator = b"<TICKET_WITH_METADATA>"
 
 
-def decode_ticket_with_metadata(ticket: flight.Ticket) -> tuple[str, dict[str, str]]:
+class FlightTicketData(BaseModel):
+    flight_name: str
+
+
+T = TypeVar("T", bound=FlightTicketData)
+
+
+def decode_ticket_with_metadata(ticket: flight.Ticket, ticket_model: T) -> tuple[T, dict[str, str]]:
     """
     Decode a ticket that has embedded and compressed metadata.
 
@@ -30,7 +40,11 @@ def decode_ticket_with_metadata(ticket: flight.Ticket) -> tuple[str, dict[str, s
         stream.seek(len(ticket_with_metadata_indicator))
         # Unpack the byte string as a uint32 ('I' is the format code for uint32)
         ticket_data_length = struct.unpack("<I", stream.read(4))[0]
-        decoded_ticket = stream.read(ticket_data_length).decode("utf-8")
+
+        # The ticket itself is a msgpack message.
+        msgpack_ticket_contents = stream.read(ticket_data_length)
+
+        decoded_ticket_data = ticket_model.model_validate(msgpack.unpackb(msgpack_ticket_contents, raw=False))
 
         metadata_decompressed_length = struct.unpack("<I", stream.read(4))[0]
         if metadata_decompressed_length > 1024 * 1024 * 2:
@@ -47,10 +61,10 @@ def decode_ticket_with_metadata(ticket: flight.Ticket) -> tuple[str, dict[str, s
                     parsed_headers[key] = value
         except Exception as e:
             raise flight.FlightUnavailableError("Unable to decompress metadata.") from e
-        return decoded_ticket, parsed_headers
+        return decoded_ticket_data, parsed_headers
     else:
-        decoded_ticket = ticket.ticket.decode("utf-8")
-        return decoded_ticket, {}
+        decoded_ticket_data = msgpack.unpackb(ticket.ticket)
+        return decoded_ticket_data, {}
 
 
 @dataclass
