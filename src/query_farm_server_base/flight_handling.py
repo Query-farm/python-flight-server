@@ -48,7 +48,7 @@ def generate_record_batches_for_used_fields(
 def endpoint(*, ticket_data: T, allow_metadata: bool) -> flight.FlightEndpoint:
     """Create a FlightEndpoint that allows metadata filtering to be passed
     back to the same server location"""
-    packed_data = msgpack.packb(ticket_data)
+    packed_data = msgpack.packb(ticket_data.model_dump())
 
     return flight.FlightEndpoint(
         f"<TICKET_ALLOWS_METADATA>{packed_data}" if allow_metadata else packed_data,
