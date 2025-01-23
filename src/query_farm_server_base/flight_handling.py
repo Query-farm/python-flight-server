@@ -24,10 +24,10 @@ class FlightTicketData(BaseModel):
 T = TypeVar("T", bound=FlightTicketData)
 
 
-def endpoint(data: T, allow_metadata: bool) -> flight.FlightEndpoint:
+def endpoint(*, ticket_data: T, allow_metadata: bool) -> flight.FlightEndpoint:
     """Create a FlightEndpoint that allows metadata filtering to be passed
     back to the same server location"""
-    packed_data = msgpack.packb(data)
+    packed_data = msgpack.packb(ticket_data)
 
     return flight.FlightEndpoint(
         f"<TICKET_ALLOWS_METADATA>{packed_data}" if allow_metadata else packed_data,
