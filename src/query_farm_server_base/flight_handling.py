@@ -24,12 +24,13 @@ class FlightTicketData(BaseModel):
 T = TypeVar("T", bound=FlightTicketData)
 
 
-def endpoint_allowing_metadata_to_be_passed(ticket_data: T) -> flight.FlightEndpoint:
+def endpoint_with_ticket_data(data: T, allow_metadata: bool) -> flight.FlightEndpoint:
     """Create a FlightEndpoint that allows metadata filtering to be passed
     back to the same server location"""
-    packed_data = msgpack.packb(ticket_data)
+    packed_data = msgpack.packb(data)
+
     return flight.FlightEndpoint(
-        f"<TICKET_ALLOWS_METADATA>{packed_data}",
+        f"<TICKET_ALLOWS_METADATA>{packed_data}" if allow_metadata else packed_data,
         [
             # This is the location.
             "arrow-flight-reuse-connection://?"
