@@ -36,19 +36,6 @@ class SchemaInfo:
     tags: dict[str, Any]
 
 
-def endpoint_allowing_metadata_to_be_passed(flight_name: str) -> flight.FlightEndpoint:
-    """Create a FlightEndpoint that allows metadata filtering to be passed
-    back to the same server location"""
-    packed_data = msgpack.packb({"flight_name": flight_name})
-    return flight.FlightEndpoint(
-        f"<TICKET_ALLOWS_METADATA>{packed_data}",
-        [
-            # This is the location.
-            "arrow-flight-reuse-connection://?"
-        ],
-    )
-
-
 class FlightSchemaMetadata:
     def __init__(
         self,
