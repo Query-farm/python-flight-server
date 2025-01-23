@@ -1,3 +1,4 @@
+from collections.abc import Generator
 import io
 import json
 import struct
@@ -8,6 +9,7 @@ import duckdb
 import immutables
 import msgpack
 import pyarrow.flight as flight
+import pyarrow as pa
 import sqlglot
 import structlog
 import zstandard as zstd
@@ -22,6 +24,25 @@ class FlightTicketData(BaseModel):
 
 
 T = TypeVar("T", bound=FlightTicketData)
+
+
+def generate_record_batches_for_used_fields(
+    *, reader: Any, used_field_names: set[str], schema: pa.Schema
+) -> Generator[pa.RecordBatch, None, None]:
+    """
+    Only return the data that is requested in the set of fields names
+    otherwise return nulls.
+    """
+    for batch in reader:
+        source_arrays = []
+        for column in schema:
+            if column.name in used_field_names:
+                source_arrays.append(batch.column(column.name))
+            else:
+                source_arrays.append(pa.nulls(batch.num_rows, column.type))
+        new_batch = pa.RecordBatch.from_arrays(source_arrays, schema=schema)
+
+        yield new_batch
 
 
 def endpoint(*, ticket_data: T, allow_metadata: bool) -> flight.FlightEndpoint:
