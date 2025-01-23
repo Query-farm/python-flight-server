@@ -38,7 +38,7 @@ def endpoint(*, ticket_data: T, allow_metadata: bool) -> flight.FlightEndpoint:
     )
 
 
-def decode_ticket_with_metadata(ticket: flight.Ticket, ticket_model: T) -> tuple[T, dict[str, str]]:
+def decode_ticket(ticket: flight.Ticket, ticket_model: T) -> tuple[T, dict[str, str]]:
     """
     Decode a ticket that has embedded and compressed metadata.
 
