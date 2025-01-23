@@ -10,10 +10,9 @@ import msgpack
 import pyarrow.flight as flight
 import sqlglot
 import structlog
-
-from pydantic import BaseModel
 import zstandard as zstd
 from duckdb_query_tools import duckdb_serialized_expression, sql_statement_analyzer
+from pydantic import BaseModel
 
 ticket_with_metadata_indicator = b"<TICKET_WITH_METADATA>"
 
@@ -23,6 +22,19 @@ class FlightTicketData(BaseModel):
 
 
 T = TypeVar("T", bound=FlightTicketData)
+
+
+def endpoint_allowing_metadata_to_be_passed(ticket_data: T) -> flight.FlightEndpoint:
+    """Create a FlightEndpoint that allows metadata filtering to be passed
+    back to the same server location"""
+    packed_data = msgpack.packb(ticket_data)
+    return flight.FlightEndpoint(
+        f"<TICKET_ALLOWS_METADATA>{packed_data}",
+        [
+            # This is the location.
+            "arrow-flight-reuse-connection://?"
+        ],
+    )
 
 
 def decode_ticket_with_metadata(ticket: flight.Ticket, ticket_model: T) -> tuple[T, dict[str, str]]:
