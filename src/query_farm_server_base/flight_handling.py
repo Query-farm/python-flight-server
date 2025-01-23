@@ -2,7 +2,7 @@ import io
 import json
 import struct
 from dataclasses import dataclass
-from typing import Any, TypeVar
+from typing import Any, Callable, TypeVar
 
 import duckdb
 import immutables
@@ -38,7 +38,7 @@ def endpoint(*, ticket_data: T, allow_metadata: bool) -> flight.FlightEndpoint:
     )
 
 
-def decode_ticket(ticket: flight.Ticket, ticket_model: T) -> tuple[T, dict[str, str]]:
+def decode_ticket(*, ticket: flight.Ticket, model_selector: Callable[[str], T]) -> tuple[T, dict[str, str]]:
     """
     Decode a ticket that has embedded and compressed metadata.
 
@@ -57,7 +57,11 @@ def decode_ticket(ticket: flight.Ticket, ticket_model: T) -> tuple[T, dict[str, 
         # The ticket itself is a msgpack message.
         msgpack_ticket_contents = stream.read(ticket_data_length)
 
-        decoded_ticket_data = ticket_model.model_validate(msgpack.unpackb(msgpack_ticket_contents, raw=False))
+        basic_data = FlightTicketData.model_validate(msgpack_ticket_contents)
+
+        decoded_ticket_data = model_selector(basic_data.flight_name).model_validate(
+            msgpack.unpackb(msgpack_ticket_contents, raw=False)
+        )
 
         metadata_decompressed_length = struct.unpack("<I", stream.read(4))[0]
         if metadata_decompressed_length > 1024 * 1024 * 2:
