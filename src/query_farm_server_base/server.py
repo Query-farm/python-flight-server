@@ -163,7 +163,6 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
             descriptor=descriptor,
         )
 
-        breakpoint()
         return self.impl_do_exchange(
             context=context,
             descriptor=descriptor,
