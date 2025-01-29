@@ -1,15 +1,15 @@
-from collections.abc import Generator
 import io
 import json
 import struct
+from collections.abc import Callable, Generator
 from dataclasses import dataclass
-from typing import Any, Callable, TypeVar
+from typing import Any, TypeVar
 
 import duckdb
 import immutables
 import msgpack
-import pyarrow.flight as flight
 import pyarrow as pa
+import pyarrow.flight as flight
 import sqlglot
 import structlog
 import zstandard as zstd
@@ -64,7 +64,7 @@ def endpoint(*, ticket_data: T, allow_metadata: bool) -> flight.FlightEndpoint:
     packed_data = msgpack.packb(ticket_data.model_dump())
 
     return flight.FlightEndpoint(
-        f"<TICKET_ALLOWS_METADATA>{packed_data}" if allow_metadata else packed_data,
+        (b"<TICKET_ALLOWS_METADATA>" + packed_data) if allow_metadata else packed_data,
         [
             # This is the location.
             "arrow-flight-reuse-connection://?"
