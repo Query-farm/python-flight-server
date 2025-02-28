@@ -1,7 +1,7 @@
 import hashlib
-import struct
 from dataclasses import dataclass
 
+import msgpack
 import zstandard as zstd
 from mypy_boto3_s3 import S3Client
 
@@ -23,7 +23,7 @@ class UploadResult:
 def _compress_and_prefix_with_length(data: bytes, compression_level: int) -> bytes:
     compressor = zstd.ZstdCompressor(level=compression_level)
     compressed_data = compressor.compress(data)
-    return struct.pack("<I", len(data)) + compressed_data
+    return msgpack.packb([len(data), compressed_data])
 
 
 def _build_sha256_key_name_and_hash(key_prefix: str, data: bytes) -> tuple[str, str]:
