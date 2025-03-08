@@ -87,6 +87,8 @@ def upload_and_generate_schema_list(
     s3_client = boto3.client("s3")
     all_schema_flights_with_length_serialized: list[Any] = []
 
+    external_details: dict[str, Any] = {}
+
     for catalog_name, schema_names in flight_inventory.items():
         for schema_name, schema_items in schema_names.items():
             # Serialize all of the FlightInfo into an array.
@@ -115,13 +117,22 @@ def upload_and_generate_schema_list(
                 ]
             )
 
+            external_details = {}
+            if not serialize_inline:
+                external_details = {
+                    "external": {
+                        "url": schema_path,
+                    }
+                }
+                if enable_sha256_caching:
+                    external_details["external"]["sha256"] = uploaded_schema_contents.sha256_hash
+
             serialized_schema_data.append(
                 {
                     "schema": schema_name,
                     "description": schema_details[schema_name].description if schema_name in schema_details else "",
                     "contents": {
-                        "url": schema_path if not serialize_inline else None,
-                        "sha256": uploaded_schema_contents.sha256_hash if enable_sha256_caching else None,
+                        **external_details,
                         "serialized": None,
                     },
                     "tags": schema_details[schema_name].tags if schema_name in schema_details else {},
@@ -139,12 +150,21 @@ def upload_and_generate_schema_list(
     )
     all_schema_path = f"{SCHEMA_BASE_URL}/{all_schema_contents_upload.s3_path}"
 
+    external_details = {}
+    if not serialize_inline:
+        external_details = {
+            "external": {
+                "url": all_schema_path,
+            }
+        }
+        if enable_sha256_caching:
+            external_details["external"]["sha256"] = all_schema_contents_upload.sha256_hash
+
     schemas_list_data = {
         "schemas": serialized_schema_data,
         # This encodes the contents of all schemas in one file.
         "contents": {
-            "url": all_schema_path if not serialize_inline else None,
-            "sha256": all_schema_contents_upload.sha256_hash if enable_sha256_caching else None,
+            **external_details,
             "serialized": all_schema_contents_upload.compressed_data if serialize_inline else None,
         },
     }
