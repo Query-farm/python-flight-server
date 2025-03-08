@@ -85,7 +85,7 @@ def upload_and_generate_schema_list(
 ) -> bytes:
     serialized_schema_data: list[dict[str, Any]] = []
     s3_client = boto3.client("s3")
-    all_schema_flights_with_length_serialized: list[Any] = []
+    all_schema_flights_serialized: list[Any] = []
 
     external_details: dict[str, Any] = {}
 
@@ -110,36 +110,26 @@ def upload_and_generate_schema_list(
 
             assert uploaded_schema_contents.compressed_data
 
-            all_schema_flights_with_length_serialized.append(
+            all_schema_flights_serialized.append(
                 [
                     uploaded_schema_contents.sha256_hash,
                     uploaded_schema_contents.compressed_data,
                 ]
             )
 
-            external_details = {}
-            if not serialize_inline:
-                external_details = {
-                    "external": {
-                        "url": schema_path,
-                    }
-                }
-                if enable_sha256_caching:
-                    external_details["external"]["sha256"] = uploaded_schema_contents.sha256_hash
-
             serialized_schema_data.append(
                 {
                     "schema": schema_name,
                     "description": schema_details[schema_name].description if schema_name in schema_details else "",
                     "contents": {
-                        **external_details,
-                        "serialized": None,
+                        "url": schema_path if not serialize_inline else None,
+                        "sha256": uploaded_schema_contents.sha256_hash,
                     },
                     "tags": schema_details[schema_name].tags if schema_name in schema_details else {},
                 }
             )
 
-    all_packed = msgpack.packb(all_schema_flights_with_length_serialized)
+    all_packed = msgpack.packb(all_schema_flights_serialized)
     all_schema_contents_upload = schema_uploader.upload(
         s3_client=s3_client,
         data=all_packed,
@@ -150,21 +140,12 @@ def upload_and_generate_schema_list(
     )
     all_schema_path = f"{SCHEMA_BASE_URL}/{all_schema_contents_upload.s3_path}"
 
-    external_details = {}
-    if not serialize_inline:
-        external_details = {
-            "external": {
-                "url": all_schema_path,
-            }
-        }
-        if enable_sha256_caching:
-            external_details["external"]["sha256"] = all_schema_contents_upload.sha256_hash
-
     schemas_list_data = {
         "schemas": serialized_schema_data,
         # This encodes the contents of all schemas in one file.
         "contents": {
-            **external_details,
+            "sha256": all_schema_contents_upload.sha256_hash,
+            "url": all_schema_path if not serialize_inline else None,
             "serialized": all_schema_contents_upload.compressed_data if serialize_inline else None,
         },
     }
