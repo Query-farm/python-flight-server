@@ -82,7 +82,7 @@ def upload_and_generate_schema_list(
     skip_upload: bool,
     enable_sha256_caching: bool = True,
     serialize_inline: bool = False,
-) -> list[bytes]:
+) -> bytes:
     serialized_schema_data: list[dict[str, Any]] = []
     s3_client = boto3.client("s3")
     all_schema_flights_with_length_serialized: list[Any] = []
