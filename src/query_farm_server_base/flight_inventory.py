@@ -156,7 +156,7 @@ def upload_and_generate_schema_list(
             "url": all_schema_path if not serialize_inline else None,
             "serialized": all_schema_contents_upload.compressed_data if serialize_inline else None,
         },
-        "version_info": {"catalog_version": catalog_version, "fixed": catalog_version_fixed},
+        "version_info": {"catalog_version": catalog_version, "is_fixed": catalog_version_fixed},
     }
 
     packed_data = msgpack.packb(schemas_list_data)
