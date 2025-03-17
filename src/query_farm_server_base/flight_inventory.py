@@ -80,6 +80,8 @@ def upload_and_generate_schema_list(
     flight_inventory: dict[str, dict[str, list[FlightInventoryWithMetadata]]],
     schema_details: dict[str, SchemaInfo],
     skip_upload: bool,
+    catalog_version: int,
+    catalog_version_fixed: bool,
     enable_sha256_caching: bool = True,
     serialize_inline: bool = False,
 ) -> bytes:
@@ -87,15 +89,21 @@ def upload_and_generate_schema_list(
     s3_client = boto3.client("s3")
     all_schema_flights_serialized: list[Any] = []
 
-    external_details: dict[str, Any] = {}
-
+    # So the problem can be this, if we're doing an inline serialization of the entire catalog
+    # we're going to double compress each schema since its compressed at the bottom level
+    # then again at the top level, ideally we'd only compress it once.
+    #
+    # But this means that we'd have to rely on the client doing proper compression of the data
+    # and storing it as the cached representations, with the proper ZStandard level, but should
+    # we be storing the compressed representations on the disk?
+    #
+    # I think we can suffer with this problem for a bit longer.
+    #
     for catalog_name, schema_names in flight_inventory.items():
         for schema_name, schema_items in schema_names.items():
             # Serialize all of the FlightInfo into an array.
             packed_flight_info = msgpack.packb([flight_info.serialize() for flight_info, _metadata in schema_items])
 
-            # Compress everything with zstd, store the uncompressed length in a 64-bit integer
-            # followed by the compressed data.
             log.info(f"Uploading schema for {schema_name}", skip_upload=skip_upload)
             uploaded_schema_contents = schema_uploader.upload(
                 s3_client=s3_client,
@@ -148,6 +156,7 @@ def upload_and_generate_schema_list(
             "url": all_schema_path if not serialize_inline else None,
             "serialized": all_schema_contents_upload.compressed_data if serialize_inline else None,
         },
+        "version_info": {"catalog_version": catalog_version, "fixed": catalog_version_fixed},
     }
 
     packed_data = msgpack.packb(schemas_list_data)
