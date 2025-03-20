@@ -58,7 +58,7 @@ def generate_record_batches_for_used_fields(
         yield new_batch
 
 
-def endpoint(*, ticket_data: T, allow_metadata: bool) -> flight.FlightEndpoint:
+def endpoint(*, ticket_data: T, allow_metadata: bool, supports_predicate_pushdown: bool) -> flight.FlightEndpoint:
     """Create a FlightEndpoint that allows metadata filtering to be passed
     back to the same server location"""
     packed_data = msgpack.packb(ticket_data.model_dump())
@@ -69,7 +69,7 @@ def endpoint(*, ticket_data: T, allow_metadata: bool) -> flight.FlightEndpoint:
             # This is the location.
             "arrow-flight-reuse-connection://?"
         ],
-        b"<TICKET_ALLOWS_METADATA>" if allow_metadata else b"",
+        msgpack.packb({"supports_predicate_pushdown": supports_predicate_pushdown}),
     )
 
 
