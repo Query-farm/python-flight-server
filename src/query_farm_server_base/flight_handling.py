@@ -87,7 +87,7 @@ def decode_ticket(
 
     if is_augmented_ticket:
         augmented_ticket = AugmentedTicketData.model_validate(
-            msgpack.unpack(
+            msgpack.unpackb(
                 ticket.ticket,
                 raw=True,
                 object_hook=lambda s: {k.decode("utf8"): v for k, v in s.items()},
