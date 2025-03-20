@@ -129,9 +129,6 @@ def decode_ticket(
             if len(filter_metadata.column_ids) > 0:
                 parsed_headers["airport-duckdb-column-ids"] = ",".join(map(str, filter_metadata.column_ids))
 
-            # for key, value in json.loads(decompressed_metadata).items():
-            #     if key != "authorization":
-            #         parsed_headers[key] = value
         except Exception as e:
             raise flight.FlightUnavailableError("Unable to decompress metadata.") from e
         return decoded_ticket_data, parsed_headers
