@@ -34,7 +34,7 @@ class FlightTicketData(BaseModel):
 
 class AugmentedTicketData(BaseModel):
     ticket: bytes
-    metadata_compressed_length: int
+    metadata_uncompressed_length: int
     metadata: bytes
 
 
@@ -97,8 +97,7 @@ def decode_ticket(
         basic_data = FlightTicketData.unpack(augmented_ticket.ticket)
         decoded_ticket_data = model_selector(basic_data.flight_name, augmented_ticket.ticket)
 
-        metadata_decompressed_length = augmented_ticket.metadata_compressed_length
-        if metadata_decompressed_length > 1024 * 1024 * 2:
+        if augmented_ticket.metadata_uncompressed_length > 1024 * 1024 * 2:
             raise flight.FlightUnavailableError("Decompressed Flight metadata is too large limit is 2mb.")
 
         metadata = augmented_ticket.metadata
