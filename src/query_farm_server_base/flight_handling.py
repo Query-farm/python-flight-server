@@ -1,6 +1,4 @@
-import io
 import json
-import struct
 from collections.abc import Callable, Generator
 from dataclasses import dataclass
 from typing import Any, TypeVar
@@ -15,8 +13,6 @@ import structlog
 import zstandard as zstd
 from duckdb_query_tools import duckdb_serialized_expression, sql_statement_analyzer
 from pydantic import BaseModel
-
-ticket_with_metadata_indicator = b"<TICKET_WITH_METADATA>"
 
 
 class FlightTicketData(BaseModel):
@@ -34,6 +30,12 @@ class FlightTicketData(BaseModel):
         )
 
         return FlightTicketData.model_validate(unpacked)
+
+
+class AugmentedTicketData(BaseModel):
+    ticket: bytes
+    metadata_compressed_length: int
+    metadata: bytes
 
 
 T = TypeVar("T", bound=FlightTicketData)
@@ -73,33 +75,32 @@ def endpoint(*, ticket_data: T, allow_metadata: bool, supports_predicate_pushdow
     )
 
 
-def decode_ticket(*, ticket: flight.Ticket, model_selector: Callable[[str, bytes], T]) -> tuple[T, dict[str, str]]:
+def decode_ticket(
+    *, ticket: flight.Ticket, model_selector: Callable[[str, bytes], T], is_augmented_ticket: bool
+) -> tuple[T, dict[str, str]]:
     """
     Decode a ticket that has embedded and compressed metadata.
 
     There is no concept of multiple headers handled here, headers are strings.
     """
-    if (
-        ticket.ticket[0 : min(len(ticket_with_metadata_indicator), len(ticket.ticket))]
-        == ticket_with_metadata_indicator
-    ):
-        # We have a ticket with metadata.
-        stream = io.BytesIO(ticket.ticket)
-        stream.seek(len(ticket_with_metadata_indicator))
-        # Unpack the byte string as a uint32 ('I' is the format code for uint32)
-        ticket_data_length = struct.unpack("<I", stream.read(4))[0]
 
-        # The ticket itself is a msgpack message.
-        msgpack_ticket_contents = stream.read(ticket_data_length)
+    if is_augmented_ticket:
+        augmented_ticket = AugmentedTicketData.model_validate(
+            msgpack.unpack(
+                ticket.ticket,
+                raw=True,
+                object_hook=lambda s: {k.decode("utf8"): v for k, v in s.items()},
+            )
+        )
 
-        basic_data = FlightTicketData.unpack(msgpack_ticket_contents)
-        decoded_ticket_data = model_selector(basic_data.flight_name, msgpack_ticket_contents)
+        basic_data = FlightTicketData.unpack(augmented_ticket.ticket)
+        decoded_ticket_data = model_selector(basic_data.flight_name, augmented_ticket.ticket)
 
-        metadata_decompressed_length = struct.unpack("<I", stream.read(4))[0]
+        metadata_decompressed_length = augmented_ticket.metadata_compressed_length
         if metadata_decompressed_length > 1024 * 1024 * 2:
             raise flight.FlightUnavailableError("Decompressed Flight metadata is too large limit is 2mb.")
 
-        metadata = stream.read()
+        metadata = augmented_ticket.metadata
         parsed_headers: dict[str, str] = {}
         try:
             # That metadata is zstd compressed, so we need to decompress it.

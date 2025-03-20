@@ -1,6 +1,7 @@
 import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
+
 from pydantic import BaseModel, ConfigDict, Field
 
 

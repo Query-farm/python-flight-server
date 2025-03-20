@@ -1,4 +1,3 @@
-import struct
 from dataclasses import dataclass
 from typing import Any, Literal
 
