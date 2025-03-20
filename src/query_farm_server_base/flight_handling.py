@@ -38,6 +38,11 @@ class AugmentedTicketData(BaseModel):
     metadata: bytes
 
 
+class FilterMetadata(BaseModel):
+    json_filters: str
+    column_ids: list[int]
+
+
 T = TypeVar("T", bound=FlightTicketData)
 
 
@@ -106,9 +111,27 @@ def decode_ticket(
             # That metadata is zstd compressed, so we need to decompress it.
             decompressor = zstd.ZstdDecompressor()
             decompressed_metadata = decompressor.decompress(metadata)
-            for key, value in json.loads(decompressed_metadata).items():
-                if key != "authorization":
-                    parsed_headers[key] = value
+
+            decode_fields = {"json_filters"}
+            unpacked_data = msgpack.unpackb(
+                decompressed_metadata,
+                raw=True,
+                object_hook=lambda s: {
+                    k.decode("utf8"): v.decode("utf8") if k in decode_fields else v for k, v in s.items()
+                },
+            )
+
+            filter_metadata = FilterMetadata.model_validate(unpacked_data)
+
+            if filter_metadata.json_filters and filter_metadata.json_filters != "":
+                parsed_headers["airport-duckdb-json-filters"] = filter_metadata.json_filters
+
+            if len(filter_metadata.column_ids) > 0:
+                parsed_headers["airport-duckdb-column-ids"] = ",".join(map(str, filter_metadata.column_ids))
+
+            # for key, value in json.loads(decompressed_metadata).items():
+            #     if key != "authorization":
+            #         parsed_headers[key] = value
         except Exception as e:
             raise flight.FlightUnavailableError("Unable to decompress metadata.") from e
         return decoded_ticket_data, parsed_headers
