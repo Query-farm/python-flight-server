@@ -2,9 +2,7 @@
 name = "query-farm-server-base"
 version = "0.1.0"
 description = "Add your description here"
-authors = [
-    { name = "Rusty Conover", email = "rusty@conover.me" }
-]
+authors = [{ name = "Rusty Conover", email = "rusty@conover.me" }]
 dependencies = [
     "structlog>=24.4.0",
     "pydantic>=2.9.2",
@@ -13,7 +11,7 @@ dependencies = [
     "cache3>=0.4.3",
     "click>=8.1.7",
     "prettytable>=3.11.0",
-    "pyarrow>=17.0.0",
+    "pyarrow>=19.0.0",
     "sentry-sdk>=2.16.0",
     "zstandard>=0.23.0",
     "fuzzywuzzy>=0.18.0",
@@ -58,7 +56,6 @@ allow-direct-references = true
 packages = ["src/query_farm_server_base"]
 
 
-
 [tool.pytest]
 
 [tool.pytest.ini_options]
@@ -68,16 +65,12 @@ addopts = "--mypy"
 #    "AWS_SECRET_ACCESS_KEY=test",
 #    "AWS_ACCESS_KEY_ID=test",
 #]
-markers = [
-    "moto: conflicting with boto3 based tests",
-]
+markers = ["moto: conflicting with boto3 based tests"]
 
 
 [tool.mypy]
 ignore_missing_imports = true
-plugins = [
-    "pydantic.mypy"
-]
+plugins = ["pydantic.mypy"]
 
 
 follow_imports = "silent"

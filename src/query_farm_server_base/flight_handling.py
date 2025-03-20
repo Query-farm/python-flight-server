@@ -71,6 +71,7 @@ def endpoint(*, ticket_data: T, allow_metadata: bool, supports_predicate_pushdow
             # This is the location.
             "arrow-flight-reuse-connection://?"
         ],
+        None,
         msgpack.packb({"supports_predicate_pushdown": supports_predicate_pushdown}),
     )
 
