@@ -64,11 +64,12 @@ def endpoint(*, ticket_data: T, allow_metadata: bool) -> flight.FlightEndpoint:
     packed_data = msgpack.packb(ticket_data.model_dump())
 
     return flight.FlightEndpoint(
-        (b"<TICKET_ALLOWS_METADATA>" + packed_data) if allow_metadata else packed_data,
+        packed_data,
         [
             # This is the location.
             "arrow-flight-reuse-connection://?"
         ],
+        b"<TICKET_ALLOWS_METADATA>" if allow_metadata else b"",
     )
 
 
