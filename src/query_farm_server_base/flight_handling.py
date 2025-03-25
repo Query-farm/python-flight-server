@@ -70,7 +70,10 @@ def generate_record_batches_for_used_fields(
 
 
 def endpoint(
-    *, ticket_data: T, allow_metadata: bool, supports_predicate_pushdown: bool
+    *,
+    ticket_data: T,
+    supports_predicate_pushdown: bool,
+    locations: list[str] | None = ["arrow-flight-reuse-connection://?"],
 ) -> flight.FlightEndpoint:
     """Create a FlightEndpoint that allows metadata filtering to be passed
     back to the same server location"""
@@ -78,10 +81,7 @@ def endpoint(
 
     return flight.FlightEndpoint(
         packed_data,
-        [
-            # This is the location.
-            "arrow-flight-reuse-connection://?"
-        ],
+        locations,
         None,
         msgpack.packb({"supports_predicate_pushdown": supports_predicate_pushdown}),
     )
