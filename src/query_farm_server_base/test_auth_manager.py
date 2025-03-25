@@ -17,7 +17,9 @@ from . import auth_manager as m
 
 def test_create_auth_manager() -> None:
     auth_manager = m.AuthManager[auth.Account, auth.AccountToken](
-        service_prefix="fake-test", account_type=auth.Account, token_type=auth.AccountToken
+        service_prefix="fake-test",
+        account_type=auth.Account,
+        token_type=auth.AccountToken,
     )
     assert auth_manager is not None
 

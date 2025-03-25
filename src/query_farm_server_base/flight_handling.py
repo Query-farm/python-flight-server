@@ -11,7 +11,10 @@ import pyarrow.flight as flight
 import sqlglot
 import structlog
 import zstandard as zstd
-from duckdb_query_tools import duckdb_serialized_expression, sql_statement_analyzer
+from duckdb_query_tools import (
+    duckdb_serialized_expression,
+    sql_statement_analyzer,
+)
 from pydantic import BaseModel
 
 
@@ -25,7 +28,8 @@ class FlightTicketData(BaseModel):
             src,
             raw=True,
             object_hook=lambda s: {
-                k.decode("utf8"): v.decode("utf8") if k.decode("utf8") in decode_fields else v for k, v in s.items()
+                k.decode("utf8"): v.decode("utf8") if k.decode("utf8") in decode_fields else v
+                for k, v in s.items()
             },
         )
 
@@ -65,7 +69,9 @@ def generate_record_batches_for_used_fields(
         yield new_batch
 
 
-def endpoint(*, ticket_data: T, allow_metadata: bool, supports_predicate_pushdown: bool) -> flight.FlightEndpoint:
+def endpoint(
+    *, ticket_data: T, allow_metadata: bool, supports_predicate_pushdown: bool
+) -> flight.FlightEndpoint:
     """Create a FlightEndpoint that allows metadata filtering to be passed
     back to the same server location"""
     packed_data = msgpack.packb(ticket_data.model_dump())
@@ -82,7 +88,10 @@ def endpoint(*, ticket_data: T, allow_metadata: bool, supports_predicate_pushdow
 
 
 def decode_ticket(
-    *, ticket: flight.Ticket, model_selector: Callable[[str, bytes], T], is_augmented_ticket: bool
+    *,
+    ticket: flight.Ticket,
+    model_selector: Callable[[str, bytes], T],
+    is_augmented_ticket: bool,
 ) -> tuple[T, dict[str, str]]:
     """
     Decode a ticket that has embedded and compressed metadata.
@@ -103,7 +112,9 @@ def decode_ticket(
         decoded_ticket_data = model_selector(basic_data.flight_name, augmented_ticket.ticket)
 
         if augmented_ticket.metadata_uncompressed_length > 1024 * 1024 * 2:
-            raise flight.FlightUnavailableError("Decompressed Flight metadata is too large limit is 2mb.")
+            raise flight.FlightUnavailableError(
+                "Decompressed Flight metadata is too large limit is 2mb."
+            )
 
         metadata = augmented_ticket.metadata
         parsed_headers: dict[str, str] = {}
@@ -117,7 +128,8 @@ def decode_ticket(
                 decompressed_metadata,
                 raw=True,
                 object_hook=lambda s: {
-                    k.decode("utf8"): v.decode("utf8") if k in decode_fields else v for k, v in s.items()
+                    k.decode("utf8"): v.decode("utf8") if k in decode_fields else v
+                    for k, v in s.items()
                 },
             )
 
@@ -127,7 +139,9 @@ def decode_ticket(
                 parsed_headers["airport-duckdb-json-filters"] = filter_metadata.json_filters
 
             if len(filter_metadata.column_ids) > 0:
-                parsed_headers["airport-duckdb-column-ids"] = ",".join(map(str, filter_metadata.column_ids))
+                parsed_headers["airport-duckdb-column-ids"] = ",".join(
+                    map(str, filter_metadata.column_ids)
+                )
 
         except Exception as e:
             raise flight.FlightUnavailableError("Unable to decompress metadata.") from e
@@ -149,14 +163,19 @@ log = structlog.get_logger()
 
 
 def parse_filter_info(
-    *, filter_data: Any, input_field_names: list[str], fields_where_values_are_known: set[str]
+    *,
+    filter_data: Any,
+    input_field_names: list[str],
+    fields_where_values_are_known: set[str],
 ) -> ParsedFilterInfo:
     filter_sql_where_clause: str | None = None
 
     if all(key in filter_data for key in ("filters", "column_binding_names_by_index")):
-        filter_sql_where_clause, filter_sql_field_type_info = duckdb_serialized_expression.convert_to_sql(
-            source=filter_data["filters"],
-            bound_column_names=filter_data["column_binding_names_by_index"],
+        filter_sql_where_clause, filter_sql_field_type_info = (
+            duckdb_serialized_expression.convert_to_sql(
+                source=filter_data["filters"],
+                bound_column_names=filter_data["column_binding_names_by_index"],
+            )
         )
 
     # There may be additional columns specified in the filter, but not actually necessary to apply to the API call
@@ -166,7 +185,8 @@ def parse_filter_info(
         filter_types_as_sql = {}
     else:
         ft = sql_statement_analyzer._filter_column_references_statement(
-            f"select * from data where {filter_sql_where_clause}", input_field_names
+            f"select * from data where {filter_sql_where_clause}",
+            input_field_names,
         )
 
         filter_where_clause = ft.find(sqlglot.exp.Where)
@@ -187,7 +207,9 @@ def parse_filter_info(
 
         log.debug("Parsed parameters", values=parsed_parameter_values)
 
-        filter_types_as_sql = duckdb_serialized_expression.convert_type_to_sql(filter_sql_field_type_info)
+        filter_types_as_sql = duckdb_serialized_expression.convert_type_to_sql(
+            filter_sql_field_type_info
+        )
 
     return ParsedFilterInfo(
         parsed_parameter_values=parsed_parameter_values,
@@ -235,12 +257,18 @@ def determine_unique_api_call_parameters(
 
     parameter_generator_clauses: list[str] = []
 
-    if parsed_filter_info.filter_sql_where_clause is not None and parsed_filter_info.filter_sql_where_clause != "":
+    if (
+        parsed_filter_info.filter_sql_where_clause is not None
+        and parsed_filter_info.filter_sql_where_clause != ""
+    ):
         parameter_generator_clauses.append(parsed_filter_info.filter_sql_where_clause)
 
     with duckdb.connect(":memory:") as connection:
         parameter_field_names = []
-        for parameter_name, parameter_values in parsed_filter_info.parsed_parameter_values.items():
+        for (
+            parameter_name,
+            parameter_values,
+        ) in parsed_filter_info.parsed_parameter_values.items():
             create_table_sql = f"CREATE TABLE parameter_{parameter_name} ({parameter_name} {parsed_filter_info.filter_types_as_sql[parameter_name]})"
             connection.execute(create_table_sql)
             parameter_field_names.append(parameter_name)
@@ -253,17 +281,26 @@ def determine_unique_api_call_parameters(
             if parameter_name not in column_names_that_cannot_be_null:
                 connection.execute(f"INSERT INTO parameter_{parameter_name} VALUES (?)", [None])
         joined_parameter_names = ",".join(parsed_filter_info.parsed_parameter_values)
-        joined_parameter_table_names = ",".join(map(lambda v: f"parameter_{v}", parameter_field_names))
+        joined_parameter_table_names = ",".join(
+            map(lambda v: f"parameter_{v}", parameter_field_names)
+        )
 
-        parameter_generator_sql = f"select {joined_parameter_names} from {joined_parameter_table_names}"
+        parameter_generator_sql = (
+            f"select {joined_parameter_names} from {joined_parameter_table_names}"
+        )
 
         parameter_generator_clauses.extend(addititional_parameter_generator_clauses)
 
         if len(parameter_generator_clauses) > 0:
             parameter_generator_sql += f" where {' and '.join(parameter_generator_clauses)}"
 
-        log.info("Parameter handling", parameter_generator_sql=parameter_generator_sql)
-        api_call_parameter_rows = connection.execute(parameter_generator_sql, parameter_generator_parameters).arrow()
+        log.info(
+            "Parameter handling",
+            parameter_generator_sql=parameter_generator_sql,
+        )
+        api_call_parameter_rows = connection.execute(
+            parameter_generator_sql, parameter_generator_parameters
+        ).arrow()
 
     return api_call_parameter_rows.to_pylist()
     # Now that we have all of the parameter tables, lets get the actual values that can be specified.

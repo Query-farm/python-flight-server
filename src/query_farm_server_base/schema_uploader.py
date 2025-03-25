@@ -28,11 +28,20 @@ def _compress_and_prefix_with_length(data: bytes, compression_level: int) -> byt
 
 def _build_sha256_key_name_and_hash(key_prefix: str, data: bytes) -> tuple[str, str]:
     sha256_hash = hashlib.sha256(data).hexdigest()
-    return f"{key_prefix}/{hex_to_url_safe_characters(sha256_hash)}", sha256_hash
+    return (
+        f"{key_prefix}/{hex_to_url_safe_characters(sha256_hash)}",
+        sha256_hash,
+    )
 
 
 def upload(
-    *, compression_level: int | None, s3_client: S3Client, data: bytes, key_prefix: str, bucket: str, skip_upload: bool
+    *,
+    compression_level: int | None,
+    s3_client: S3Client,
+    data: bytes,
+    key_prefix: str,
+    bucket: str,
+    skip_upload: bool,
 ) -> UploadResult:
     """
     Upload data to S3 bucket.

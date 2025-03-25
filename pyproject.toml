@@ -90,7 +90,7 @@ init_typed = true
 warn_required_dynamic_aliases = true
 
 [tool.ruff]
-line-length = 120
+line-length = 100
 
 [tool.ruff.lint]
 select = [

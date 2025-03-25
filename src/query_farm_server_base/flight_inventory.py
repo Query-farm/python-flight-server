@@ -101,7 +101,9 @@ def upload_and_generate_schema_list(
     for catalog_name, schema_names in flight_inventory.items():
         for schema_name, schema_items in schema_names.items():
             # Serialize all of the FlightInfo into an array.
-            packed_flight_info = msgpack.packb([flight_info.serialize() for flight_info, _metadata in schema_items])
+            packed_flight_info = msgpack.packb(
+                [flight_info.serialize() for flight_info, _metadata in schema_items]
+            )
 
             log.info(f"Uploading schema for {schema_name}", skip_upload=skip_upload)
             uploaded_schema_contents = schema_uploader.upload(
@@ -127,12 +129,16 @@ def upload_and_generate_schema_list(
             serialized_schema_data.append(
                 {
                     "schema": schema_name,
-                    "description": schema_details[schema_name].description if schema_name in schema_details else "",
+                    "description": schema_details[schema_name].description
+                    if schema_name in schema_details
+                    else "",
                     "contents": {
                         "url": schema_path if not serialize_inline else None,
                         "sha256": uploaded_schema_contents.sha256_hash,
                     },
-                    "tags": schema_details[schema_name].tags if schema_name in schema_details else {},
+                    "tags": schema_details[schema_name].tags
+                    if schema_name in schema_details
+                    else {},
                 }
             )
 

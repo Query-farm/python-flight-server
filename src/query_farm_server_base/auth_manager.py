@@ -186,7 +186,9 @@ class AuthManager(Generic[AccountType, TokenType]):
         if cached_account is not None:
             account_details = self._account_type(**json.loads(cached_account), auth_manager=self)
         else:
-            account_data = self._accounts_table.get_item(Key={"account_id": self._add_service_prefix(account_id)})
+            account_data = self._accounts_table.get_item(
+                Key={"account_id": self._add_service_prefix(account_id)}
+            )
 
             if "Item" not in account_data:
                 raise auth.AccountUnknown("Account not found: " + account_id)
@@ -194,7 +196,11 @@ class AuthManager(Generic[AccountType, TokenType]):
             # Parse it out into the type with pydantic.
             account_details = self._account_from_dynamodb(account_data["Item"])
 
-            self._set_cache(key=account_id, value=account_details.model_dump_json(), type="account")
+            self._set_cache(
+                key=account_id,
+                value=account_details.model_dump_json(),
+                type="account",
+            )
 
         if account_details.disabled:
             raise auth.AccountDisabled("Account is disabled")
@@ -257,7 +263,9 @@ class AuthManager(Generic[AccountType, TokenType]):
             **(
                 {**dynamodb_item}
                 | {
-                    "account_id": str(dynamodb_item["account_id"]).removeprefix(self._add_service_prefix("")),
+                    "account_id": str(dynamodb_item["account_id"]).removeprefix(
+                        self._add_service_prefix("")
+                    ),
                 }
             ),
         )

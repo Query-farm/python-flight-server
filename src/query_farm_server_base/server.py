@@ -32,18 +32,22 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     def auth_middleware(
         self, context: flight.ServerCallContext
     ) -> middleware.BasicAuthServerMiddleware[AccountType, TokenType]:
-        auth_middleware: middleware.BasicAuthServerMiddleware[auth.Account, auth.AccountToken] = context.get_middleware(
-            "auth"
+        auth_middleware: middleware.BasicAuthServerMiddleware[auth.Account, auth.AccountToken] = (
+            context.get_middleware("auth")
         )
         assert isinstance(auth_middleware, middleware.BasicAuthServerMiddleware)
         return auth_middleware
 
-    def caller_from_context_(self, context: flight.ServerCallContext) -> Caller[AccountType, TokenType]:
+    def caller_from_context_(
+        self, context: flight.ServerCallContext
+    ) -> Caller[AccountType, TokenType]:
         auth_middleware = self.auth_middleware(context)
         return Caller(account=auth_middleware.account, token=auth_middleware.token)
 
     def auth_logging_items(
-        self, context: flight.ServerCallContext, caller: Caller[AccountType, TokenType]
+        self,
+        context: flight.ServerCallContext,
+        caller: Caller[AccountType, TokenType],
     ) -> dict[str, Any]:
         """Return the items that will be bound to the logger."""
         return {
@@ -62,7 +66,9 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     ) -> Iterator[flight.FlightInfo]:
         raise NotImplementedError("impl_list_flights not implemented")
 
-    def list_flights(self, context: flight.ServerCallContext, criteria: bytes) -> Iterator[flight.FlightInfo]:
+    def list_flights(
+        self, context: flight.ServerCallContext, criteria: bytes
+    ) -> Iterator[flight.FlightInfo]:
         caller = self.caller_from_context_(context)
 
         logger = log.bind(
@@ -90,7 +96,9 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         raise NotImplementedError("impl_get_flight_info not implemented")
 
     def get_flight_info(
-        self, context: flight.ServerCallContext, descriptor: flight.FlightDescriptor
+        self,
+        context: flight.ServerCallContext,
+        descriptor: flight.FlightDescriptor,
     ) -> flight.FlightInfo:
         caller = self.caller_from_context_(context)
 
@@ -120,7 +128,9 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     ) -> Iterator[bytes]:
         raise NotImplementedError("impl_do_action not implemented")
 
-    def do_action(self, context: flight.ServerCallContext, action: flight.Action) -> Iterator[bytes]:
+    def do_action(
+        self, context: flight.ServerCallContext, action: flight.Action
+    ) -> Iterator[bytes]:
         caller = self.caller_from_context_(context)
 
         logger = log.bind(
@@ -182,7 +192,9 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     ) -> flight.RecordBatchStream:
         raise NotImplementedError("impl_do_get not implemented")
 
-    def do_get(self, context: flight.ServerCallContext, ticket: flight.Ticket) -> flight.RecordBatchStream:
+    def do_get(
+        self, context: flight.ServerCallContext, ticket: flight.Ticket
+    ) -> flight.RecordBatchStream:
         caller = self.caller_from_context_(context)
 
         logger = log.bind(
