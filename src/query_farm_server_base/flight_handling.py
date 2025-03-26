@@ -10,7 +10,6 @@ import pyarrow as pa
 import pyarrow.flight as flight
 import sqlglot
 import structlog
-import zstandard as zstd
 from duckdb_query_tools import (
     duckdb_serialized_expression,
     sql_statement_analyzer,
@@ -20,10 +19,12 @@ from pydantic import BaseModel
 
 class FlightTicketData(BaseModel):
     flight_name: str
+    json_filters: str | None = None
+    column_ids: list[int] | None = None
 
     @staticmethod
     def unpack(src: bytes) -> "FlightTicketData":
-        decode_fields = {"flight_name"}
+        decode_fields = {"flight_name", "json_filters", "column_ids"}
         unpacked = msgpack.unpackb(
             src,
             raw=True,
@@ -34,18 +35,6 @@ class FlightTicketData(BaseModel):
         )
 
         return FlightTicketData.model_validate(unpacked)
-
-
-class AugmentedTicketData(BaseModel):
-    ticket: bytes
-    metadata_uncompressed_length: int
-    metadata: bytes
-
-
-class FilterMetadata(BaseModel):
-    json_filters: str
-    column_ids: list[int]
-
 
 T = TypeVar("T", bound=FlightTicketData)
 
@@ -72,7 +61,6 @@ def generate_record_batches_for_used_fields(
 def endpoint(
     *,
     ticket_data: T,
-    supports_predicate_pushdown: bool,
     locations: list[str] | None = ["arrow-flight-reuse-connection://?"],
 ) -> flight.FlightEndpoint:
     """Create a FlightEndpoint that allows metadata filtering to be passed
@@ -82,8 +70,6 @@ def endpoint(
     return flight.FlightEndpoint(
         packed_data,
         locations,
-        None,
-        msgpack.packb({"supports_predicate_pushdown": supports_predicate_pushdown}),
     )
 
 
@@ -91,65 +77,26 @@ def decode_ticket(
     *,
     ticket: flight.Ticket,
     model_selector: Callable[[str, bytes], T],
-    is_augmented_ticket: bool,
 ) -> tuple[T, dict[str, str]]:
     """
     Decode a ticket that has embedded and compressed metadata.
 
     There is no concept of multiple headers handled here, headers are strings.
     """
+    parsed_headers: dict[str, str] = {}
 
-    if is_augmented_ticket:
-        augmented_ticket = AugmentedTicketData.model_validate(
-            msgpack.unpackb(
-                ticket.ticket,
-                raw=True,
-                object_hook=lambda s: {k.decode("utf8"): v for k, v in s.items()},
-            )
+    basic_data = FlightTicketData.unpack(ticket.ticket)
+
+    if basic_data.json_filters and basic_data.json_filters != "":
+        parsed_headers = {"airport-duckdb-json-filters": basic_data.json_filters}
+
+    if basic_data.column_ids and len(basic_data.column_ids) > 0:
+        parsed_headers["airport-duckdb-column-ids"] = ",".join(
+            map(str, basic_data.column_ids)
         )
 
-        basic_data = FlightTicketData.unpack(augmented_ticket.ticket)
-        decoded_ticket_data = model_selector(basic_data.flight_name, augmented_ticket.ticket)
-
-        if augmented_ticket.metadata_uncompressed_length > 1024 * 1024 * 2:
-            raise flight.FlightUnavailableError(
-                "Decompressed Flight metadata is too large limit is 2mb."
-            )
-
-        metadata = augmented_ticket.metadata
-        parsed_headers: dict[str, str] = {}
-        try:
-            # That metadata is zstd compressed, so we need to decompress it.
-            decompressor = zstd.ZstdDecompressor()
-            decompressed_metadata = decompressor.decompress(metadata)
-
-            decode_fields = {"json_filters"}
-            unpacked_data = msgpack.unpackb(
-                decompressed_metadata,
-                raw=True,
-                object_hook=lambda s: {
-                    k.decode("utf8"): v.decode("utf8") if k in decode_fields else v
-                    for k, v in s.items()
-                },
-            )
-
-            filter_metadata = FilterMetadata.model_validate(unpacked_data)
-
-            if filter_metadata.json_filters and filter_metadata.json_filters != "":
-                parsed_headers["airport-duckdb-json-filters"] = filter_metadata.json_filters
-
-            if len(filter_metadata.column_ids) > 0:
-                parsed_headers["airport-duckdb-column-ids"] = ",".join(
-                    map(str, filter_metadata.column_ids)
-                )
-
-        except Exception as e:
-            raise flight.FlightUnavailableError("Unable to decompress metadata.") from e
-        return decoded_ticket_data, parsed_headers
-    else:
-        basic_data = FlightTicketData.unpack(ticket.ticket)
-        decoded_ticket_data = model_selector(basic_data.flight_name, ticket.ticket)
-        return decoded_ticket_data, {}
+    decoded_ticket_data = model_selector(basic_data.flight_name, ticket.ticket)
+    return decoded_ticket_data, parsed_headers
 
 
 @dataclass
