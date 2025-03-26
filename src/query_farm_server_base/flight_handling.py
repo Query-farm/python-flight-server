@@ -24,7 +24,7 @@ class FlightTicketData(BaseModel):
 
     @staticmethod
     def unpack(src: bytes) -> "FlightTicketData":
-        decode_fields = {"flight_name", "json_filters", "column_ids"}
+        decode_fields = {"flight_name", "json_filters"}
         unpacked = msgpack.unpackb(
             src,
             raw=True,
