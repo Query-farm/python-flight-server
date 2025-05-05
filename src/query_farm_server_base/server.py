@@ -31,11 +31,11 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
 
     def auth_middleware(
         self, context: flight.ServerCallContext
-    ) -> middleware.BasicAuthServerMiddleware[AccountType, TokenType]:
-        auth_middleware: middleware.BasicAuthServerMiddleware[auth.Account, auth.AccountToken] = (
+    ) -> middleware.SaveCredentialsMiddleware[AccountType, TokenType]:
+        auth_middleware: middleware.SaveCredentialsMiddleware[auth.Account, auth.AccountToken] = (
             context.get_middleware("auth")
         )
-        assert isinstance(auth_middleware, middleware.BasicAuthServerMiddleware)
+        assert isinstance(auth_middleware, middleware.SaveCredentialsMiddleware)
         return auth_middleware
 
     def caller_from_context_(

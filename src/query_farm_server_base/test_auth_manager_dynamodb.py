@@ -12,11 +12,11 @@ from mypy_boto3_dynamodb.type_defs import (
 )
 
 from . import auth
-from . import auth_manager as m
+from . import auth_manager_dynamodb as auth_manager_dynamodb
 
 
 def test_create_auth_manager() -> None:
-    auth_manager = m.AuthManager[auth.Account, auth.AccountToken](
+    auth_manager = auth_manager_dynamodb.AuthManagerDynamoDB[auth.Account, auth.AccountToken](
         service_prefix="fake-test",
         account_type=auth.Account,
         token_type=auth.AccountToken,
@@ -124,7 +124,7 @@ def test_mocked_auth(
     os.environ["AWS_ACCESS_KEY_ID"] = "fake"
     os.environ["AWS_SECRET_ACCESS_KEY"] = "fake"
     tables = next(mocked_dynamodb_tables)
-    auth_manager = m.AuthManager[auth.Account, auth.AccountToken](
+    auth_manager = auth_manager_dynamodb.AuthManagerDynamoDB[auth.Account, auth.AccountToken](
         service_prefix="fake-test",
         tokens_table=tables["tokens"],
         accounts_table=tables["accounts"],
