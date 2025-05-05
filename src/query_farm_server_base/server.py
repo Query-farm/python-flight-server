@@ -8,15 +8,8 @@ from . import auth, middleware
 
 log = structlog.get_logger()
 
-
 AccountType = TypeVar("AccountType", bound=auth.Account)
 TokenType = TypeVar("TokenType", bound=auth.AccountToken)
-
-
-class Caller(Generic[AccountType, TokenType]):
-    def __init__(self, *, account: AccountType, token: TokenType) -> None:
-        self.account = account
-        self.token = token
 
 
 class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]):
@@ -38,21 +31,21 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         assert isinstance(auth_middleware, middleware.SaveCredentialsMiddleware)
         return auth_middleware
 
-    def caller_from_context_(
+    def credentials_from_context_(
         self, context: flight.ServerCallContext
-    ) -> Caller[AccountType, TokenType]:
+    ) -> middleware.SuppliedCredentials[AccountType, TokenType] | None | None:
         auth_middleware = self.auth_middleware(context)
-        return Caller(account=auth_middleware.account, token=auth_middleware.token)
+        return auth_middleware.credentials
 
     def auth_logging_items(
         self,
         context: flight.ServerCallContext,
-        caller: Caller[AccountType, TokenType],
+        credentials: middleware.SuppliedCredentials[AccountType, TokenType] | None,
     ) -> dict[str, Any]:
         """Return the items that will be bound to the logger."""
         return {
-            "token": caller.token,
-            "account": caller.account.account_id,
+            "token": None if credentials is None else credentials.token,
+            "account": None if credentials is None else credentials.account.account_id,
             "address": context.peer(),
         }
 
@@ -61,7 +54,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         *,
         context: flight.ServerCallContext,
         criteria: bytes,
-        caller: Caller[AccountType, TokenType],
+        caller: middleware.SuppliedCredentials[AccountType, TokenType] | None,
         logger: structlog.BoundLogger,
     ) -> Iterator[flight.FlightInfo]:
         raise NotImplementedError("impl_list_flights not implemented")
@@ -69,7 +62,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     def list_flights(
         self, context: flight.ServerCallContext, criteria: bytes
     ) -> Iterator[flight.FlightInfo]:
-        caller = self.caller_from_context_(context)
+        caller = self.credentials_from_context_(context)
 
         logger = log.bind(
             **self.auth_logging_items(context, caller),
@@ -90,7 +83,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         *,
         context: flight.ServerCallContext,
         descriptor: flight.FlightDescriptor,
-        caller: Caller[AccountType, TokenType],
+        caller: middleware.SuppliedCredentials[AccountType, TokenType] | None,
         logger: structlog.BoundLogger,
     ) -> flight.FlightInfo:
         raise NotImplementedError("impl_get_flight_info not implemented")
@@ -100,7 +93,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         context: flight.ServerCallContext,
         descriptor: flight.FlightDescriptor,
     ) -> flight.FlightInfo:
-        caller = self.caller_from_context_(context)
+        caller = self.credentials_from_context_(context)
 
         logger = log.bind(
             **self.auth_logging_items(context, caller),
@@ -123,7 +116,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         *,
         context: flight.ServerCallContext,
         action: flight.Action,
-        caller: Caller[AccountType, TokenType],
+        caller: middleware.SuppliedCredentials[AccountType, TokenType] | None,
         logger: structlog.BoundLogger,
     ) -> Iterator[bytes]:
         raise NotImplementedError("impl_do_action not implemented")
@@ -131,7 +124,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     def do_action(
         self, context: flight.ServerCallContext, action: flight.Action
     ) -> Iterator[bytes]:
-        caller = self.caller_from_context_(context)
+        caller = self.credentials_from_context_(context)
 
         logger = log.bind(
             **self.auth_logging_items(context, caller),
@@ -154,7 +147,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         descriptor: flight.FlightDescriptor,
         reader: flight.MetadataRecordBatchReader,
         writer: flight.MetadataRecordBatchWriter,
-        caller: Caller[AccountType, TokenType],
+        caller: middleware.SuppliedCredentials[AccountType, TokenType] | None,
         logger: structlog.BoundLogger,
     ) -> None:
         raise NotImplementedError("impl_do_exchange not implemented")
@@ -166,7 +159,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         reader: flight.MetadataRecordBatchReader,
         writer: flight.MetadataRecordBatchWriter,
     ) -> None:
-        caller = self.caller_from_context_(context)
+        caller = self.credentials_from_context_(context)
 
         logger = log.bind(
             **self.auth_logging_items(context, caller),
@@ -187,7 +180,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         *,
         context: flight.ServerCallContext,
         ticket: flight.Ticket,
-        caller: Caller[AccountType, TokenType],
+        caller: middleware.SuppliedCredentials[AccountType, TokenType] | None,
         logger: structlog.BoundLogger,
     ) -> flight.RecordBatchStream:
         raise NotImplementedError("impl_do_get not implemented")
@@ -195,7 +188,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     def do_get(
         self, context: flight.ServerCallContext, ticket: flight.Ticket
     ) -> flight.RecordBatchStream:
-        caller = self.caller_from_context_(context)
+        caller = self.credentials_from_context_(context)
 
         logger = log.bind(
             **self.auth_logging_items(context, caller),
@@ -214,7 +207,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         self,
         *,
         context: flight.ServerCallContext,
-        caller: Caller[AccountType, TokenType],
+        caller: middleware.SuppliedCredentials[AccountType, TokenType] | None,
         logger: structlog.BoundLogger,
         descriptor: flight.FlightDescriptor,
         reader: flight.MetadataRecordBatchReader,
@@ -229,7 +222,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         reader: flight.MetadataRecordBatchReader,
         writer: flight.FlightMetadataWriter,
     ) -> None:
-        caller = self.caller_from_context_(context)
+        caller = self.credentials_from_context_(context)
 
         logger = log.bind(
             **self.auth_logging_items(context, caller),

@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import Any, Generic, TypeVar
 
 import pyarrow.flight as flight
@@ -26,6 +27,7 @@ AccountType = TypeVar("AccountType", bound=auth.Account)
 TokenType = TypeVar("TokenType", bound=auth.AccountToken)
 
 
+@dataclass
 class SuppliedCredentials(Generic[AccountType, TokenType]):
     def __init__(self, token: TokenType, account: AccountType) -> None:
         assert token
