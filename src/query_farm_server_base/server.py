@@ -87,10 +87,8 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     def impl_list_flights(
         self,
         *,
-        context: flight.ServerCallContext,
+        context: CallContext[AccountType, TokenType],
         criteria: bytes,
-        caller: middleware.SuppliedCredentials[AccountType, TokenType] | None,
-        logger: structlog.BoundLogger,
     ) -> Iterator[flight.FlightInfo]:
         raise NotImplementedError("impl_list_flights not implemented")
 
@@ -104,22 +102,24 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
             criteria=criteria,
         )
 
-        logger.info("list_flights")
+        logger.info("list_flights", criteria=criteria)
+
+        call_context = CallContext(
+            context=context,
+            caller=caller,
+            logger=logger,
+        )
 
         return self.impl_list_flights(
-            context=context,
+            context=call_context,
             criteria=criteria,
-            logger=logger,
-            caller=caller,
         )
 
     def impl_get_flight_info(
         self,
         *,
-        context: flight.ServerCallContext,
+        context: CallContext[AccountType, TokenType],
         descriptor: flight.FlightDescriptor,
-        caller: middleware.SuppliedCredentials[AccountType, TokenType] | None,
-        logger: structlog.BoundLogger,
     ) -> flight.FlightInfo:
         raise NotImplementedError("impl_get_flight_info not implemented")
 
@@ -137,20 +137,25 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
 
         logger.info(
             "get_flight_info",
+            descriptor=descriptor,
+        )
+
+        call_context = CallContext(
+            context=context,
+            caller=caller,
+            logger=logger,
         )
 
         return self.impl_get_flight_info(
-            context=context,
+            context=call_context,
             descriptor=descriptor,
-            logger=logger,
-            caller=caller,
         )
 
     def impl_do_action(
         self,
         *,
         action: flight.Action,
-        call_context: CallContext[AccountType, TokenType],
+        context: CallContext[AccountType, TokenType],
     ) -> Iterator[bytes]:
         raise NotImplementedError("impl_do_action not implemented")
 
@@ -161,7 +166,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     def action_add_column(
         self,
         *,
-        call_context: CallContext[AccountType, TokenType],
+        context: CallContext[AccountType, TokenType],
         parameters: action_decoders.AddColumnParameters,
     ) -> None:
         self._unimplemented_action("add_column")
@@ -170,7 +175,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     def action_add_constraint(
         self,
         *,
-        call_context: CallContext[AccountType, TokenType],
+        context: CallContext[AccountType, TokenType],
         parameters: action_decoders.AddConstraintParameters,
     ) -> None:
         self._unimplemented_action("add_constraint")
@@ -179,7 +184,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     def action_add_field(
         self,
         *,
-        call_context: CallContext[AccountType, TokenType],
+        context: CallContext[AccountType, TokenType],
         parameters: action_decoders.AddFieldParameters,
     ) -> None:
         self._unimplemented_action("add_field")
@@ -188,7 +193,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     def action_change_column_type(
         self,
         *,
-        call_context: CallContext[AccountType, TokenType],
+        context: CallContext[AccountType, TokenType],
         parameters: action_decoders.ChangeColumnTypeParameters,
     ) -> None:
         self._unimplemented_action("change_column_type")
@@ -199,7 +204,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     def action_column_statistics(
         self,
         *,
-        call_context: CallContext[AccountType, TokenType],
+        context: CallContext[AccountType, TokenType],
         parameters: action_decoders.ColumnStatisticsParameters,
     ) -> dict[str, Any]:
         self._unimplemented_action("column_statistics")
@@ -208,7 +213,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     def action_drop_not_null(
         self,
         *,
-        call_context: CallContext[AccountType, TokenType],
+        context: CallContext[AccountType, TokenType],
         parameters: action_decoders.DropNotNullParameters,
     ) -> None:
         self._unimplemented_action("drop_not_null")
@@ -217,7 +222,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     def action_drop_table(
         self,
         *,
-        call_context: CallContext[AccountType, TokenType],
+        context: CallContext[AccountType, TokenType],
         parameters: action_decoders.DropObjectParameters,
     ) -> None:
         self._unimplemented_action("drop_table")
@@ -226,7 +231,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     def action_endpoints(
         self,
         *,
-        call_context: CallContext[AccountType, TokenType],
+        context: CallContext[AccountType, TokenType],
         parameters: action_decoders.EndpointsParameters,
     ) -> list[flight.Endpoint]:
         self._unimplemented_action("endpoints")
@@ -235,7 +240,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     def action_list_schemas(
         self,
         *,
-        call_context: CallContext[AccountType, TokenType],
+        context: CallContext[AccountType, TokenType],
         parameters: action_decoders.ListSchemasParameters,
     ) -> Iterator[bytes]:
         self._unimplemented_action("list_schemas")
@@ -244,7 +249,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     def action_remove_column(
         self,
         *,
-        call_context: CallContext[AccountType, TokenType],
+        context: CallContext[AccountType, TokenType],
         parameters: action_decoders.RemoveColumnParameters,
     ) -> None:
         self._unimplemented_action("remove_column")
@@ -253,7 +258,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     def action_remove_field(
         self,
         *,
-        call_context: CallContext[AccountType, TokenType],
+        context: CallContext[AccountType, TokenType],
         parameters: action_decoders.RemoveFieldParameters,
     ) -> None:
         self._unimplemented_action("remove_field")
@@ -262,7 +267,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     def action_rename_column(
         self,
         *,
-        call_context: CallContext[AccountType, TokenType],
+        context: CallContext[AccountType, TokenType],
         parameters: action_decoders.RenameColumnParameters,
     ) -> None:
         self._unimplemented_action("rename_column")
@@ -271,7 +276,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     def action_rename_field(
         self,
         *,
-        call_context: CallContext[AccountType, TokenType],
+        context: CallContext[AccountType, TokenType],
         parameters: action_decoders.RenameFieldParameters,
     ) -> None:
         self._unimplemented_action("rename_field")
@@ -280,7 +285,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     def action_rename_table(
         self,
         *,
-        call_context: CallContext[AccountType, TokenType],
+        context: CallContext[AccountType, TokenType],
         parameters: action_decoders.RenameTableParameters,
     ) -> None:
         self._unimplemented_action("rename_table")
@@ -289,7 +294,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     def action_set_default(
         self,
         *,
-        call_context: CallContext[AccountType, TokenType],
+        context: CallContext[AccountType, TokenType],
         parameters: action_decoders.SetDefaultParameters,
     ) -> None:
         self._unimplemented_action("set_default")
@@ -298,7 +303,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     def action_set_not_null(
         self,
         *,
-        call_context: CallContext[AccountType, TokenType],
+        context: CallContext[AccountType, TokenType],
         parameters: action_decoders.SetNotNullParameters,
     ) -> None:
         self._unimplemented_action("set_not_null")
@@ -307,7 +312,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     def action_table_function_flight_info(
         self,
         *,
-        call_context: CallContext[AccountType, TokenType],
+        context: CallContext[AccountType, TokenType],
         parameters: action_decoders.TableFunctionFlightInfoParameters,
     ) -> flight.FlightInfo:
         self._unimplemented_action("table_function_flight_info")
@@ -316,7 +321,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     def action_catalog_version(
         self,
         *,
-        call_context: CallContext[AccountType, TokenType],
+        context: CallContext[AccountType, TokenType],
         database_name: str,
     ) -> tuple[int, bool]:
         pass
@@ -326,7 +331,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     def action_create_transaction(
         self,
         *,
-        call_context: CallContext[AccountType, TokenType],
+        context: CallContext[AccountType, TokenType],
         database_name: str,
     ) -> str | None:
         pass
@@ -336,7 +341,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     def action_create_schema(
         self,
         *,
-        call_context: CallContext[AccountType, TokenType],
+        context: CallContext[AccountType, TokenType],
         parameters: action_decoders.CreateSchemaParameters,
     ) -> None:
         pass
@@ -345,7 +350,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     def action_create_table(
         self,
         *,
-        call_context: CallContext[AccountType, TokenType],
+        context: CallContext[AccountType, TokenType],
         parameters: action_decoders.CreateTableParameters,
     ) -> flight.FlightInfo:
         self._unimplemented_action("create_table")
@@ -355,7 +360,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     def action_drop_schema(
         self,
         *,
-        call_context: CallContext[AccountType, TokenType],
+        context: CallContext[AccountType, TokenType],
         parameters: action_decoders.DropObjectParameters,
     ) -> None:
         self._unimplemented_action("drop_schema")
@@ -386,52 +391,52 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
 
         if action.type == "add_column":
             self.action_add_column(
-                call_context=call_context,
+                context=call_context,
                 parameters=action_decoders.add_column(action),
             )
             return iter([])
         elif action.type == "add_constraint":
             self.action_add_constraint(
-                call_context=call_context,
+                context=call_context,
                 parameters=action_decoders.add_constraint(action),
             )
             return iter([])
         elif action.type == "add_field":
             self.action_add_field(
-                call_context=call_context,
+                context=call_context,
                 parameters=action_decoders.add_field(action),
             )
             return iter([])
         elif action.type == "catalog_version":
             return self.pack_result(
                 self.action_catalog_version(
-                    call_context=call_context,
+                    context=call_context,
                     database_name=action.body.to_pybytes().decode("utf-8"),
                 )
             )
         elif action.type == "change_column_type":
             self.action_change_column_type(
-                call_context=call_context,
+                context=call_context,
                 parameters=action_decoders.change_column_type(action),
             )
             return iter([])
         elif action.type == "column_statistics":
             return self.pack_result(
                 self.action_column_statistics(
-                    call_context=call_context,
+                    context=call_context,
                     parameters=action_decoders.column_statistics(action),
                 )
             )
         elif action.type == "create_schema":
             self.action_create_schema(
-                call_context=call_context,
+                context=call_context,
                 parameters=action_decoders.create_schema(action),
             )
             return iter([])
         elif action.type == "create_table":
             return self.pack_result(
                 self.action_create_table(
-                    call_context=call_context,
+                    context=call_context,
                     parameters=action_decoders.create_table(action),
                 )
             )
@@ -440,7 +445,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
                 msgpack.packb(
                     [
                         self.action_create_transaction(
-                            call_context=call_context,
+                            context=call_context,
                             database_name=action.body.to_pybytes().decode("utf-8"),
                         )
                     ]
@@ -448,101 +453,99 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
             )
         elif action.type == "drop_not_null":
             self.action_drop_not_null(
-                call_context=call_context,
+                context=call_context,
                 parameters=action_decoders.drop_not_null(action),
             )
             return iter([])
         elif action.type == "drop_table":
             self.action_drop_table(
-                call_context=call_context,
+                context=call_context,
                 parameters=action_decoders.drop_table(action),
             )
             return iter([])
         elif action.type == "drop_schema":
             self.action_drop_schema(
-                call_context=call_context,
+                context=call_context,
                 parameters=action_decoders.drop_schema(action),
             )
             return iter([])
         elif action.type == "endpoints":
             return self.pack_result(
                 self.action_endpoints(
-                    call_context=call_context,
+                    context=call_context,
                     parameters=action_decoders.endpoints(action),
                 )
             )
         elif action.type == "list_schemas":
             return self.pack_result(
                 self.action_list_schemas(
-                    call_context=call_context,
+                    context=call_context,
                     parameters=action_decoders.list_schemas(action),
                 )
             )
         elif action.type == "remove_column":
             self.action_remove_column(
-                call_context=call_context,
+                context=call_context,
                 parameters=action_decoders.remove_column(action),
             )
             return iter([])
         elif action.type == "remove_field":
             self.action_remove_field(
-                call_context=call_context,
+                context=call_context,
                 parameters=action_decoders.remove_field(action),
             )
             return iter([])
         elif action.type == "rename_column":
             self.action_rename_column(
-                call_context=call_context,
+                context=call_context,
                 parameters=action_decoders.rename_column(action),
             )
             return iter([])
         elif action.type == "rename_field":
             self.action_rename_field(
-                call_context=call_context,
+                context=call_context,
                 parameters=action_decoders.rename_field(action),
             )
             return iter([])
         elif action.type == "rename_table":
             self.action_rename_table(
-                call_context=call_context,
+                context=call_context,
                 parameters=action_decoders.rename_table(action),
             )
             return iter([])
         elif action.type == "set_default":
             self.action_set_default(
-                call_context=call_context,
+                context=call_context,
                 parameters=action_decoders.set_default(action),
             )
             return iter([])
         elif action.type == "set_not_null":
             self.action_set_not_null(
-                call_context=call_context,
+                context=call_context,
                 parameters=action_decoders.set_not_null(action),
             )
             return iter([])
         elif action.type == "table_function_flight_info":
             return self.pack_result(
                 self.action_table_function_flight_info(
-                    call_context=call_context,
+                    context=call_context,
                     parameters=action_decoders.table_function_flight_info(action),
                 )
             )
         else:
             logger.debug(action.type)
             return self.impl_do_action(
-                call_context=call_context,
+                context=call_context,
                 action=action,
             )
 
     def impl_do_exchange(
         self,
         *,
-        context: flight.ServerCallContext,
+        context: CallContext[AccountType, TokenType],
         descriptor: flight.FlightDescriptor,
         reader: flight.MetadataRecordBatchReader,
         writer: flight.MetadataRecordBatchWriter,
-        caller: middleware.SuppliedCredentials[AccountType, TokenType] | None,
-        logger: structlog.BoundLogger,
     ) -> None:
         raise NotImplementedError("impl_do_exchange not implemented")
 
@@ -560,22 +563,24 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
             descriptor=descriptor,
         )
 
-        return self.impl_do_exchange(
+        call_context = CallContext(
             context=context,
+            caller=caller,
+            logger=logger,
+        )
+
+        return self.impl_do_exchange(
+            context=call_context,
             descriptor=descriptor,
             reader=reader,
             writer=writer,
-            logger=logger,
-            caller=caller,
         )
 
     def impl_do_get(
         self,
         *,
-        context: flight.ServerCallContext,
+        context: CallContext[AccountType, TokenType],
         ticket: flight.Ticket,
-        caller: middleware.SuppliedCredentials[AccountType, TokenType] | None,
-        logger: structlog.BoundLogger,
     ) -> flight.RecordBatchStream:
         raise NotImplementedError("impl_do_get not implemented")
 
@@ -590,19 +595,21 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
 
         logger.info("do_get", ticket=ticket)
 
-        return self.impl_do_get(
+        call_context = CallContext(
             context=context,
-            ticket=ticket,
-            logger=logger,
             caller=caller,
+            logger=logger,
+        )
+
+        return self.impl_do_get(
+            context=call_context,
+            ticket=ticket,
         )
 
     def impl_do_put(
         self,
         *,
-        context: flight.ServerCallContext,
-        caller: middleware.SuppliedCredentials[AccountType, TokenType] | None,
-        logger: structlog.BoundLogger,
+        context: CallContext[AccountType, TokenType],
         descriptor: flight.FlightDescriptor,
         reader: flight.MetadataRecordBatchReader,
         writer: flight.FlightMetadataWriter,
@@ -624,10 +631,14 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
 
         logger.info("do_put", descriptor=descriptor)
 
-        return self.impl_do_put(
+        call_context = CallContext(
             context=context,
-            logger=logger,
             caller=caller,
+            logger=logger,
+        )
+
+        return self.impl_do_put(
+            context=call_context,
             descriptor=descriptor,
             reader=reader,
             writer=writer,
