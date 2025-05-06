@@ -44,7 +44,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     ) -> dict[str, Any]:
         """Return the items that will be bound to the logger."""
         return {
-            "token": None if credentials is None else credentials.token,
+            "token": None if credentials is None else credentials.token.token,
             "account": None if credentials is None else credentials.account.account_id,
             "address": context.peer(),
         }
