@@ -336,7 +336,6 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     ) -> str | None:
         pass
 
-    @abstractmethod
     @log_action()
     def action_create_schema(
         self,
@@ -355,7 +354,6 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     ) -> flight.FlightInfo:
         self._unimplemented_action("create_table")
 
-    @abstractmethod
     @log_action()
     def action_drop_schema(
         self,
