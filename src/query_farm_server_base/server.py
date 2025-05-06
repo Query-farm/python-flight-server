@@ -40,7 +40,9 @@ def log_action() -> Callable[[Callable[P, R]], Callable[P, R]]:
             if "context" in kwargs:
                 context = cast(CallContext[Any, Any], kwargs["context"])
                 context.logger.debug(func_name, parameters=kwargs["parameters"])
-            return func(*args, **kwargs)
+            result = func(*args, **kwargs)
+            print("got result")
+            return result
 
         return wrapper
 
