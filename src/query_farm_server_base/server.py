@@ -336,7 +336,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         *,
         context: CallContext[AccountType, TokenType],
         database_name: str,
-    ) -> str | None:
+    ) -> tuple[str | None]:
         pass
 
     @log_action()
