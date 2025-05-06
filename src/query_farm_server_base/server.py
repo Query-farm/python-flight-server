@@ -245,7 +245,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         *,
         context: CallContext[AccountType, TokenType],
         parameters: action_decoders.ListSchemasParameters,
-    ) -> Iterator[bytes]:
+    ) -> list[bytes]:
         self._unimplemented_action("list_schemas")
 
     @log_action()
