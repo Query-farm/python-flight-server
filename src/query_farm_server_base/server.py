@@ -233,7 +233,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         *,
         context: CallContext[AccountType, TokenType],
         parameters: action_decoders.EndpointsParameters,
-    ) -> list[flight.Endpoint]:
+    ) -> list[flight.FlightEndpoint]:
         self._unimplemented_action("endpoints")
 
     @log_action()
@@ -471,10 +471,13 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
             return iter([])
         elif action.type == "endpoints":
             return self.pack_result(
-                self.action_endpoints(
-                    context=call_context,
-                    parameters=action_decoders.endpoints(action),
-                )
+                [
+                    e.serialize()
+                    for e in self.action_endpoints(
+                        context=call_context,
+                        parameters=action_decoders.endpoints(action),
+                    )
+                ]
             )
         elif action.type == "list_schemas":
             return self.pack_result(
