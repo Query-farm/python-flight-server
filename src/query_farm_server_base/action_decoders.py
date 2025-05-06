@@ -49,7 +49,7 @@ def deserialize_flight_descriptor(cls: Any, value: Any) -> flight.FlightDescript
         raise ValueError(f"Invalid Flight descriptor: {e}") from e
 
 
-class CreateTableActionParameters(BaseModel):
+class CreateTableParameters(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)  # for Pydantic v2
     catalog_name: str
     schema_name: str
@@ -189,6 +189,16 @@ class RemoveFieldParameters(AlterBase):
     cascade: bool
 
 
+class RenameColumnParameters(AlterBase):
+    old_name: str
+    new_name: str
+
+
+class RenameFieldParameters(AlterBase):
+    column_path: list[str]
+    new_name: str
+
+
 class RenameTableParameters(AlterBase):
     new_table_name: str
 
@@ -217,6 +227,10 @@ class TableFunctionFlightInfoParameters(BaseModel):
     )
 
 
+def table_function_flight_info(action: flight.Action) -> TableFunctionFlightInfoParameters:
+    return unpack_with_model(action, TableFunctionFlightInfoParameters)
+
+
 def add_column(action: flight.Action) -> AddColumnParameters:
     return unpack_with_model(action, AddColumnParameters)
 
@@ -233,8 +247,8 @@ def change_column_type(action: flight.Action) -> ChangeColumnTypeParameters:
     return unpack_with_model(action, ChangeColumnTypeParameters)
 
 
-def create_table(action: flight.Action) -> CreateTableActionParameters:
-    return unpack_with_model(action, CreateTableActionParameters)
+def create_table(action: flight.Action) -> CreateTableParameters:
+    return unpack_with_model(action, CreateTableParameters)
 
 
 def column_statistics(action: flight.Action) -> ColumnStatisticsParameters:
@@ -275,6 +289,14 @@ def remove_column(action: flight.Action) -> RemoveColumnParameters:
 
 def remove_field(action: flight.Action) -> RemoveFieldParameters:
     return unpack_with_model(action, RemoveFieldParameters)
+
+
+def rename_column(action: flight.Action) -> RenameColumnParameters:
+    return unpack_with_model(action, RenameColumnParameters)
+
+
+def rename_field(action: flight.Action) -> RenameFieldParameters:
+    return unpack_with_model(action, RenameFieldParameters)
 
 
 def rename_table(action: flight.Action) -> RenameTableParameters:
