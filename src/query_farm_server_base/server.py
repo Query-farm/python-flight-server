@@ -376,8 +376,6 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
             action=action,
         )
 
-        logger.info("do_action")
-
         call_context = CallContext(
             context=context,
             caller=caller,
@@ -439,14 +437,10 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
                 )
             )
         elif action.type == "create_transaction":
-            return iter(
-                msgpack.packb(
-                    [
-                        self.action_create_transaction(
-                            context=call_context,
-                            database_name=action.body.to_pybytes().decode("utf-8"),
-                        )
-                    ]
+            return self.pack_result(
+                self.action_create_transaction(
+                    context=call_context,
+                    database_name=action.body.to_pybytes().decode("utf-8"),
                 )
             )
         elif action.type == "drop_not_null":
