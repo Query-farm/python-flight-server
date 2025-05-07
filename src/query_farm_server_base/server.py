@@ -41,6 +41,10 @@ class GetCatalogVersionResult(BaseModel):
     is_fixed: bool
 
 
+class CreateTransactionResult(BaseModel):
+    identifier: str | None
+
+
 class AirportSerializedContentsWithSHA256Hash(BaseModel):
     # This is the sha256 hash of the serialized data
     sha256: str
@@ -370,7 +374,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         *,
         context: CallContext[AccountType, TokenType],
         database_name: str,
-    ) -> tuple[str | None]:
+    ) -> CreateTransactionResult:
         pass
 
     @log_action()
@@ -478,7 +482,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
                 self.action_create_transaction(
                     context=call_context,
                     database_name=action.body.to_pybytes().decode("utf-8"),
-                )
+                ).identifier
             )
         elif action.type == "drop_not_null":
             self.action_drop_not_null(
