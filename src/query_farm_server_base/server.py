@@ -41,6 +41,28 @@ class GetCatalogVersionResult(BaseModel):
     is_fixed: bool
 
 
+class AirportSerializedContentsWithSHA256Hash(BaseModel):
+    # This is the sha256 hash of the serialized data
+    sha256: str
+    # This is the url to the serialized data
+    url: str | None
+    # This is the serialized data, if we are doing inline serialization
+    serialized: str | None
+
+
+class AirportSerializedSchema(BaseModel):
+    name: str
+    description: str
+    tags: dict[str, str]
+    contents: AirportSerializedContentsWithSHA256Hash
+
+
+class AirportSerializedCatalogRoot(BaseModel):
+    contents: AirportSerializedContentsWithSHA256Hash
+    schemas: list[AirportSerializedSchema]
+    version_info: GetCatalogVersionResult
+
+
 # Setup a decorator to log the action and its parameters.
 def log_action() -> Callable[[Callable[P, R]], Callable[P, R]]:
     def decorator(func: Callable[P, R]) -> Callable[P, R]:
@@ -257,7 +279,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         *,
         context: CallContext[AccountType, TokenType],
         parameters: action_decoders.ListSchemasParameters,
-    ) -> flight_inventory.AirportSerializedCatalogRoot:
+    ) -> AirportSerializedCatalogRoot:
         self._unimplemented_action("list_schemas")
 
     @log_action()

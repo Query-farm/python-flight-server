@@ -6,9 +6,13 @@ import msgpack
 import pyarrow as pa
 import pyarrow.flight as flight
 import structlog
-from pydantic import BaseModel
 
 from . import schema_uploader, server
+from .server import (
+    AirportSerializedCatalogRoot,
+    AirportSerializedContentsWithSHA256Hash,
+    AirportSerializedSchema,
+)
 
 log = structlog.get_logger()
 
@@ -33,28 +37,6 @@ STANDARD_WRITE_OPTIONS = pa.ipc.IpcWriteOptions(
 class SchemaInfo:
     description: str
     tags: dict[str, Any]
-
-
-class AirportSerializedContentsWithSHA256Hash(BaseModel):
-    # This is the sha256 hash of the serialized data
-    sha256: str
-    # This is the url to the serialized data
-    url: str | None
-    # This is the serialized data, if we are doing inline serialization
-    serialized: str | None
-
-
-class AirportSerializedSchema(BaseModel):
-    name: str
-    description: str
-    tags: dict[str, str]
-    contents: AirportSerializedContentsWithSHA256Hash
-
-
-class AirportSerializedCatalogRoot(BaseModel):
-    contents: AirportSerializedContentsWithSHA256Hash
-    schemas: list[AirportSerializedSchema]
-    version_info: server.GetCatalogVersionResult
 
 
 class FlightSchemaMetadata:
@@ -106,7 +88,7 @@ def upload_and_generate_schema_list(
     enable_sha256_caching: bool = True,
     serialize_inline: bool = False,
 ) -> AirportSerializedCatalogRoot:
-    serialized_schema_data: list[dict[str, Any]] = []
+    serialized_schema_data: list[AirportSerializedSchema] = []
     s3_client = boto3.client("s3")
     all_schema_flights_serialized: list[Any] = []
 
@@ -149,19 +131,18 @@ def upload_and_generate_schema_list(
             )
 
             serialized_schema_data.append(
-                {
-                    "name": schema_name,
-                    "description": schema_details[schema_name].description
+                AirportSerializedSchema(
+                    name=schema_name,
+                    description=schema_details[schema_name].description
                     if schema_name in schema_details
                     else "",
-                    "contents": {
-                        "url": schema_path if not serialize_inline else None,
-                        "sha256": uploaded_schema_contents.sha256_hash,
-                    },
-                    "tags": schema_details[schema_name].tags
-                    if schema_name in schema_details
-                    else {},
-                }
+                    contents=AirportSerializedContentsWithSHA256Hash(
+                        url=schema_path if not serialize_inline else None,
+                        sha256=uploaded_schema_contents.sha256_hash,
+                        serialized=None,
+                    ),
+                    tags=schema_details[schema_name].tags if schema_name in schema_details else {},
+                )
             )
 
     all_packed = msgpack.packb(all_schema_flights_serialized)
