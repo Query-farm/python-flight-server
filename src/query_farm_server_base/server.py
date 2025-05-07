@@ -12,7 +12,7 @@ from pydantic import BaseModel
 
 from query_farm_server_base import action_decoders
 
-from . import auth, flight_inventory, middleware
+from . import auth, middleware
 
 # This is the level of ZStandard compression to use for the top-level schema
 # JSON information.
@@ -203,7 +203,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     def _unimplemented_action(self, action_name: str) -> NoReturn:
         raise flight.FlightUnavailableError(f"The {action_name} action is not implemented")
 
-    @log_action()
+    @log_action
     def action_add_column(
         self,
         *,
@@ -212,7 +212,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     ) -> None:
         self._unimplemented_action("add_column")
 
-    @log_action()
+    @log_action
     def action_add_constraint(
         self,
         *,
@@ -221,7 +221,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     ) -> None:
         self._unimplemented_action("add_constraint")
 
-    @log_action()
+    @log_action
     def action_add_field(
         self,
         *,
@@ -230,7 +230,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     ) -> None:
         self._unimplemented_action("add_field")
 
-    @log_action()
+    @log_action
     def action_change_column_type(
         self,
         *,
@@ -241,7 +241,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
 
     # FIXME: build a type for the column statistics, or switch over
     # to an arrow based return set of values.
-    @log_action()
+    @log_action
     def action_column_statistics(
         self,
         *,
@@ -250,7 +250,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     ) -> dict[str, Any]:
         self._unimplemented_action("column_statistics")
 
-    @log_action()
+    @log_action
     def action_drop_not_null(
         self,
         *,
@@ -259,7 +259,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     ) -> None:
         self._unimplemented_action("drop_not_null")
 
-    @log_action()
+    @log_action
     def action_drop_table(
         self,
         *,
@@ -268,7 +268,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     ) -> None:
         self._unimplemented_action("drop_table")
 
-    @log_action()
+    @log_action
     def action_endpoints(
         self,
         *,
@@ -277,7 +277,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     ) -> list[flight.FlightEndpoint]:
         self._unimplemented_action("endpoints")
 
-    @log_action()
+    @log_action
     def action_list_schemas(
         self,
         *,
@@ -286,7 +286,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     ) -> AirportSerializedCatalogRoot:
         self._unimplemented_action("list_schemas")
 
-    @log_action()
+    @log_action
     def action_remove_column(
         self,
         *,
@@ -295,7 +295,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     ) -> None:
         self._unimplemented_action("remove_column")
 
-    @log_action()
+    @log_action
     def action_remove_field(
         self,
         *,
@@ -304,7 +304,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     ) -> None:
         self._unimplemented_action("remove_field")
 
-    @log_action()
+    @log_action
     def action_rename_column(
         self,
         *,
@@ -313,7 +313,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     ) -> None:
         self._unimplemented_action("rename_column")
 
-    @log_action()
+    @log_action
     def action_rename_field(
         self,
         *,
@@ -322,7 +322,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     ) -> None:
         self._unimplemented_action("rename_field")
 
-    @log_action()
+    @log_action
     def action_rename_table(
         self,
         *,
@@ -331,7 +331,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     ) -> None:
         self._unimplemented_action("rename_table")
 
-    @log_action()
+    @log_action
     def action_set_default(
         self,
         *,
@@ -340,7 +340,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     ) -> None:
         self._unimplemented_action("set_default")
 
-    @log_action()
+    @log_action
     def action_set_not_null(
         self,
         *,
@@ -349,7 +349,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     ) -> None:
         self._unimplemented_action("set_not_null")
 
-    @log_action()
+    @log_action
     def action_table_function_flight_info(
         self,
         *,
@@ -368,7 +368,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         pass
 
     @abstractmethod
-    @log_action()
+    @log_action
     def action_create_transaction(
         self,
         *,
@@ -377,7 +377,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     ) -> CreateTransactionResult:
         pass
 
-    @log_action()
+    @log_action
     def action_create_schema(
         self,
         *,
@@ -386,7 +386,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     ) -> None:
         pass
 
-    @log_action()
+    @log_action
     def action_create_table(
         self,
         *,
@@ -395,7 +395,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     ) -> flight.FlightInfo:
         self._unimplemented_action("create_table")
 
-    @log_action()
+    @log_action
     def action_drop_schema(
         self,
         *,
@@ -520,9 +520,6 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
             packed_data = msgpack.packb(schemas_result.model_dump())
             compressor = zstd.ZstdCompressor(level=SCHEMA_TOP_LEVEL_COMPRESSION_LEVEL)
             compressed_data = compressor.compress(packed_data)
-
-            unpacked_data = msgpack.unpackb(packed_data)
-            print(unpacked_data)
             return iter([msgpack.packb([len(packed_data), compressed_data])])
         elif action.type == "remove_column":
             self.action_remove_column(
