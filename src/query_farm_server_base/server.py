@@ -19,10 +19,6 @@ from . import auth, middleware
 SCHEMA_TOP_LEVEL_COMPRESSION_LEVEL = 12
 
 
-P = ParamSpec("P")
-R = TypeVar("R")
-
-
 log = structlog.get_logger()
 
 AccountType = TypeVar("AccountType", bound=auth.Account)
@@ -67,25 +63,26 @@ class AirportSerializedCatalogRoot(BaseModel):
     version_info: GetCatalogVersionResult
 
 
+P = ParamSpec("P")
+R = TypeVar("R")
+
+
 # Setup a decorator to log the action and its parameters.
-def log_action() -> Callable[[Callable[P, R]], Callable[P, R]]:
-    def decorator(func: Callable[P, R]) -> Callable[P, R]:
-        @functools.wraps(func)
-        def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
-            func_name = func.__name__
+def log_action(func: Callable[..., R]) -> Callable[P, R]:
+    @functools.wraps(func)
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+        func_name = func.__name__
 
-            # Example: log a known kwarg
-            if "context" in kwargs:
-                context = cast(CallContext[Any, Any], kwargs["context"])
-                context.logger.debug(func_name, parameters=kwargs["parameters"])
-            print("Calling function:", func_name)
-            result = func(*args, **kwargs)
-            print("got result")
-            return result
+        # Example: log a known kwarg
+        if "context" in kwargs:
+            context = cast(CallContext[Any, Any], kwargs["context"])
+            context.logger.debug(func_name, parameters=kwargs["parameters"])
+        print("Calling function:", func_name)
+        result = func(*args, **kwargs)
+        print("got result")
+        return result
 
-        return wrapper
-
-    return decorator
+    return wrapper
 
 
 class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType], ABC):
