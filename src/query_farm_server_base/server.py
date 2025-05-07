@@ -7,10 +7,17 @@ from typing import Any, Generic, NoReturn, ParamSpec, TypeVar, cast
 import msgpack
 import pyarrow.flight as flight
 import structlog
+import zstandard as zstd
+from pydantic import BaseModel
 
 from query_farm_server_base import action_decoders
 
-from . import auth, middleware
+from . import auth, flight_inventory, middleware
+
+# This is the level of ZStandard compression to use for the top-level schema
+# JSON information.
+SCHEMA_TOP_LEVEL_COMPRESSION_LEVEL = 12
+
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -27,6 +34,11 @@ class CallContext(Generic[AccountType, TokenType]):
     context: flight.ServerCallContext
     caller: middleware.SuppliedCredentials[AccountType, TokenType] | None
     logger: structlog.BoundLogger
+
+
+class GetCatalogVersionResult(BaseModel):
+    catalog_version: int
+    is_fixed: bool
 
 
 # Setup a decorator to log the action and its parameters.
@@ -245,7 +257,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         *,
         context: CallContext[AccountType, TokenType],
         parameters: action_decoders.ListSchemasParameters,
-    ) -> list[bytes]:
+    ) -> flight_inventory.AirportSerializedCatalogRoot:
         self._unimplemented_action("list_schemas")
 
     @log_action()
@@ -326,7 +338,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         *,
         context: CallContext[AccountType, TokenType],
         database_name: str,
-    ) -> tuple[int, bool]:
+    ) -> GetCatalogVersionResult:
         pass
 
     @abstractmethod
@@ -475,12 +487,14 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
                 ]
             )
         elif action.type == "list_schemas":
-            return self.pack_result(
-                self.action_list_schemas(
-                    context=call_context,
-                    parameters=action_decoders.list_schemas(action),
-                )
+            schemas_result = self.action_list_schemas(
+                context=call_context,
+                parameters=action_decoders.list_schemas(action),
             )
+            packed_data = msgpack.packb(schemas_result.model_dump())
+            compressor = zstd.ZstdCompressor(level=SCHEMA_TOP_LEVEL_COMPRESSION_LEVEL)
+            compressed_data = compressor.compress(packed_data)
+            return iter([msgpack.packb([len(packed_data), compressed_data])])
         elif action.type == "remove_column":
             self.action_remove_column(
                 context=call_context,

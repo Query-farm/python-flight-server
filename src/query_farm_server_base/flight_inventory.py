@@ -6,9 +6,9 @@ import msgpack
 import pyarrow as pa
 import pyarrow.flight as flight
 import structlog
-import zstandard as zstd
+from pydantic import BaseModel
 
-from . import schema_uploader
+from . import schema_uploader, server
 
 log = structlog.get_logger()
 
@@ -33,6 +33,28 @@ STANDARD_WRITE_OPTIONS = pa.ipc.IpcWriteOptions(
 class SchemaInfo:
     description: str
     tags: dict[str, Any]
+
+
+class AirportSerializedContentsWithSHA256Hash(BaseModel):
+    # This is the sha256 hash of the serialized data
+    sha256: str
+    # This is the url to the serialized data
+    url: str | None
+    # This is the serialized data, if we are doing inline serialization
+    serialized: str | None
+
+
+class AirportSerializedSchema(BaseModel):
+    name: str
+    description: str
+    tags: dict[str, str]
+    contents: AirportSerializedContentsWithSHA256Hash
+
+
+class AirportSerializedCatalogRoot(BaseModel):
+    contents: AirportSerializedContentsWithSHA256Hash
+    schemas: list[AirportSerializedSchema]
+    version_info: server.GetCatalogVersionResult
 
 
 class FlightSchemaMetadata:
@@ -83,7 +105,7 @@ def upload_and_generate_schema_list(
     catalog_version_fixed: bool,
     enable_sha256_caching: bool = True,
     serialize_inline: bool = False,
-) -> bytes:
+) -> AirportSerializedCatalogRoot:
     serialized_schema_data: list[dict[str, Any]] = []
     s3_client = boto3.client("s3")
     all_schema_flights_serialized: list[Any] = []
@@ -128,7 +150,7 @@ def upload_and_generate_schema_list(
 
             serialized_schema_data.append(
                 {
-                    "schema": schema_name,
+                    "name": schema_name,
                     "description": schema_details[schema_name].description
                     if schema_name in schema_details
                     else "",
@@ -153,18 +175,14 @@ def upload_and_generate_schema_list(
     )
     all_schema_path = f"{SCHEMA_BASE_URL}/{all_schema_contents_upload.s3_path}"
 
-    schemas_list_data = {
-        "schemas": serialized_schema_data,
-        # This encodes the contents of all schemas in one file.
-        "contents": {
-            "sha256": all_schema_contents_upload.sha256_hash,
-            "url": all_schema_path if not serialize_inline else None,
-            "serialized": all_schema_contents_upload.compressed_data if serialize_inline else None,
-        },
-        "version_info": [catalog_version, catalog_version_fixed],
-    }
-
-    packed_data = msgpack.packb(schemas_list_data)
-    compressor = zstd.ZstdCompressor(level=SCHEMA_TOP_LEVEL_COMPRESSION_LEVEL)
-    compressed_data = compressor.compress(packed_data)
-    return msgpack.packb([len(packed_data), compressed_data])
+    return AirportSerializedCatalogRoot(
+        schemas=serialized_schema_data,
+        contents=AirportSerializedContentsWithSHA256Hash(
+            sha256=all_schema_contents_upload.sha256_hash,
+            url=all_schema_path if not serialize_inline else None,
+            serialized=all_schema_contents_upload.compressed_data if serialize_inline else None,
+        ),
+        version_info=server.GetCatalogVersionResult(
+            catalog_version=catalog_version, is_fixed=catalog_version_fixed
+        ),
+    )
