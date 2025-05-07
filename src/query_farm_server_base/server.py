@@ -51,7 +51,7 @@ class AirportSerializedContentsWithSHA256Hash(BaseModel):
     # This is the url to the serialized data
     url: str | None
     # This is the serialized data, if we are doing inline serialization
-    serialized: str | None
+    serialized: bytes | None
 
 
 class AirportSerializedSchema(BaseModel):
