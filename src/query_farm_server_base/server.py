@@ -520,6 +520,9 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
             packed_data = msgpack.packb(schemas_result.model_dump())
             compressor = zstd.ZstdCompressor(level=SCHEMA_TOP_LEVEL_COMPRESSION_LEVEL)
             compressed_data = compressor.compress(packed_data)
+
+            unpacked_data = msgpack.unpackb(packed_data)
+            print(unpacked_data)
             return iter([msgpack.packb([len(packed_data), compressed_data])])
         elif action.type == "remove_column":
             self.action_remove_column(
