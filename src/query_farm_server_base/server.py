@@ -72,7 +72,7 @@ def log_action(func: Callable[..., R]) -> Callable[P, R]:
     @functools.wraps(func)
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
         func_name = func.__name__
-
+        breakpoint()
         # Example: log a known kwarg
         if "context" in kwargs:
             context = cast(CallContext[Any, Any], kwargs["context"])
