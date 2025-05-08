@@ -212,6 +212,10 @@ class SetNotNullParameters(AlterBase):
     column_name: str
 
 
+class CatalogVersionParameters(BaseModel):
+    catalog_name: str
+
+
 class TableFunctionFlightInfoParameters(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)  # for Pydantic v2
     catalog: str
@@ -229,6 +233,10 @@ class TableFunctionFlightInfoParameters(BaseModel):
 
 def table_function_flight_info(action: flight.Action) -> TableFunctionFlightInfoParameters:
     return unpack_with_model(action, TableFunctionFlightInfoParameters)
+
+
+def catalog_version(action: flight.Action) -> CatalogVersionParameters:
+    return unpack_with_model(action, CatalogVersionParameters)
 
 
 def add_column(action: flight.Action) -> AddColumnParameters:
