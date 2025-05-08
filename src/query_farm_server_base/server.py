@@ -373,7 +373,6 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
 
         logger = log.bind(
             **self.auth_logging_items(context, caller),
-            action=action,
         )
 
         call_context = CallContext(
@@ -483,6 +482,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
                 return iter([])
             return self.pack_result(result)
 
+        logger.debug(action.type, action=action)
         return self.impl_do_action(
             context=call_context,
             action=action,
