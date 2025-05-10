@@ -77,7 +77,7 @@ def endpoint(
     )
 
 
-def unpack_with_model_(source: bytes, model_cls: type[AnyModel]) -> AnyModel:
+def decode_ticket_model(source: flight.Ticket, model_cls: type[AnyModel]) -> AnyModel:
     decode_fields: set[str] = set()
     for name, field in model_cls.model_fields.items():
         if isinstance(field.annotation, str) or (
@@ -88,7 +88,7 @@ def unpack_with_model_(source: bytes, model_cls: type[AnyModel]) -> AnyModel:
             decode_fields.add(name)
 
     unpacked = msgpack.unpackb(
-        source,
+        source.ticket,
         raw=True,
         object_hook=lambda s: {
             k.decode("utf8"): v.decode("utf8") if k.decode("utf8") in decode_fields else v
@@ -96,14 +96,6 @@ def unpack_with_model_(source: bytes, model_cls: type[AnyModel]) -> AnyModel:
         },
     )
     return model_cls.model_validate(unpacked)
-
-
-def decode_ticket_model(
-    *,
-    ticket: flight.Ticket,
-    cls: type[AnyModel],
-) -> AnyModel:
-    return unpack_with_model_(ticket.ticket, cls)
 
 
 def decode_ticket(
