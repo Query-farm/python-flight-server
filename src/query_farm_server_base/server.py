@@ -193,7 +193,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
             ActionType.TABLE_FUNCTION_FLIGHT_INFO: ActionHandlerSpec(
                 self.action_table_function_flight_info,
                 action_decoders.table_function_flight_info,
-                None,
+                lambda v: v.model_dump(),
                 False,
             ),
             ActionType.LIST_SCHEMAS: ActionHandlerSpec(
@@ -211,7 +211,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
             ActionType.CREATE_TRANSACTION: ActionHandlerSpec(
                 self.action_create_transaction,
                 action_decoders.create_transaction,
-                None,
+                lambda v: v.model_dump(),
                 False,
             ),
         }
