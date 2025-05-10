@@ -203,7 +203,10 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
                 False,
             ),
             ActionType.CATALOG_VERSION: ActionHandlerSpec(
-                self.action_catalog_version, action_decoders.catalog_version, None, False
+                self.action_catalog_version,
+                action_decoders.catalog_version,
+                lambda v: v.model_dump(),
+                False,
             ),
             ActionType.CREATE_TRANSACTION: ActionHandlerSpec(
                 self.action_create_transaction,
