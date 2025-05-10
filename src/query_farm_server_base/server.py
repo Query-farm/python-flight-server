@@ -261,25 +261,29 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     def list_flights(
         self, context: flight.ServerCallContext, criteria: bytes
     ) -> Iterator[flight.FlightInfo]:
-        caller = self.credentials_from_context_(context)
+        try:
+            caller = self.credentials_from_context_(context)
 
-        logger = log.bind(
-            **self.auth_logging_items(context, caller),
-            criteria=criteria,
-        )
+            logger = log.bind(
+                **self.auth_logging_items(context, caller),
+                criteria=criteria,
+            )
 
-        logger.info("list_flights", criteria=criteria)
+            logger.info("list_flights", criteria=criteria)
 
-        call_context = CallContext(
-            context=context,
-            caller=caller,
-            logger=logger,
-        )
+            call_context = CallContext(
+                context=context,
+                caller=caller,
+                logger=logger,
+            )
 
-        return self.impl_list_flights(
-            context=call_context,
-            criteria=criteria,
-        )
+            return self.impl_list_flights(
+                context=call_context,
+                criteria=criteria,
+            )
+        except Exception as e:
+            logger.exception("list_flights", error=str(e))
+            raise
 
     def impl_get_flight_info(
         self,
@@ -624,6 +628,8 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
             airport_operation_headers = header_middleware.client_headers.get("airport-operation")
             if airport_operation_headers is not None and len(airport_operation_headers) > 0:
                 airport_operation = airport_operation_headers[0]
+
+                log.debug("do_exchange", airport_operation=airport_operation)
 
                 return_chunks_headers = header_middleware.client_headers.get("return-chunks")
                 if return_chunks_headers is None or len(return_chunks_headers) == 0:
