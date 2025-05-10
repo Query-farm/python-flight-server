@@ -38,6 +38,7 @@ class FlightTicketData(BaseModel):
 
 
 T = TypeVar("T", bound=FlightTicketData)
+AnyModel = TypeVar("AnyModel", bound=BaseModel)
 
 
 def generate_record_batches_for_used_fields(
@@ -61,7 +62,7 @@ def generate_record_batches_for_used_fields(
 
 def endpoint(
     *,
-    ticket_data: T,
+    ticket_data: AnyModel,
     locations: list[str] | None = None,
 ) -> flight.FlightEndpoint:
     """Create a FlightEndpoint that allows metadata filtering to be passed
@@ -76,7 +77,7 @@ def endpoint(
     )
 
 
-def unpack_with_model_(source: bytes, model_cls: type[T]) -> T:
+def unpack_with_model_(source: bytes, model_cls: type[AnyModel]) -> AnyModel:
     decode_fields: set[str] = set()
     for name, field in model_cls.model_fields.items():
         if isinstance(field.annotation, str) or (
@@ -100,8 +101,8 @@ def unpack_with_model_(source: bytes, model_cls: type[T]) -> T:
 def decode_ticket_model(
     *,
     ticket: flight.Ticket,
-    cls: type[T],
-) -> T:
+    cls: type[AnyModel],
+) -> AnyModel:
     return unpack_with_model_(ticket.ticket, cls)
 
 
