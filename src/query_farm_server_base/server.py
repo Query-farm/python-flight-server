@@ -294,28 +294,32 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         context: flight.ServerCallContext,
         descriptor: flight.FlightDescriptor,
     ) -> flight.FlightInfo:
-        caller = self.credentials_from_context_(context)
+        try:
+            caller = self.credentials_from_context_(context)
 
-        logger = log.bind(
-            **self.auth_logging_items(context, caller),
-            descriptor=descriptor,
-        )
+            logger = log.bind(
+                **self.auth_logging_items(context, caller),
+                descriptor=descriptor,
+            )
 
-        logger.info(
-            "get_flight_info",
-            descriptor=descriptor,
-        )
+            logger.info(
+                "get_flight_info",
+                descriptor=descriptor,
+            )
 
-        call_context = CallContext(
-            context=context,
-            caller=caller,
-            logger=logger,
-        )
+            call_context = CallContext(
+                context=context,
+                caller=caller,
+                logger=logger,
+            )
 
-        return self.impl_get_flight_info(
-            context=call_context,
-            descriptor=descriptor,
-        )
+            return self.impl_get_flight_info(
+                context=call_context,
+                descriptor=descriptor,
+            )
+        except Exception as e:
+            logger.exception("get_flight_info", error=str(e))
+            raise
 
     def impl_do_action(
         self,
@@ -515,35 +519,39 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     def do_action(
         self, context: flight.ServerCallContext, action: flight.Action
     ) -> Iterator[bytes]:
-        caller = self.credentials_from_context_(context)
+        try:
+            caller = self.credentials_from_context_(context)
 
-        logger = log.bind(
-            **self.auth_logging_items(context, caller),
-        )
+            logger = log.bind(
+                **self.auth_logging_items(context, caller),
+            )
 
-        call_context = CallContext(
-            context=context,
-            caller=caller,
-            logger=logger,
-        )
+            call_context = CallContext(
+                context=context,
+                caller=caller,
+                logger=logger,
+            )
 
-        logger.info("pre action", action=action)
-        if handler := self.action_handlers_.get(action.type):
-            parameters = handler.decoder(action)
-            logger.debug(action.type, parameters=parameters)
+            if handler := self.action_handlers_.get(action.type):
+                parameters = handler.decoder(action)
+                logger.debug(action.type, parameters=parameters)
 
-            result = handler.method(context=call_context, parameters=parameters)
-            if handler.post_transform:
-                result = handler.post_transform(result)
-            if handler.empty_result:
-                return iter([])
-            return self.pack_result(result) if handler.pack_result else iter([result])
-
-        logger.debug(action.type, action=action)
-        return self.impl_do_action(
-            context=call_context,
-            action=action,
-        )
+                result = handler.method(context=call_context, parameters=parameters)
+                if handler.post_transform:
+                    result = handler.post_transform(result)
+                if handler.empty_result:
+                    return iter([])
+                result = self.pack_result(result) if handler.pack_result else iter([result])
+                return result
+            else:
+                logger.debug("action", type=action.type, action=action)
+                return self.impl_do_action(
+                    context=call_context,
+                    action=action,
+                )
+        except Exception as e:
+            logger.exception("do_action", error=str(e))
+            raise
 
     def impl_do_exchange(
         self,
@@ -598,72 +606,76 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         reader: flight.MetadataRecordBatchReader,
         writer: flight.MetadataRecordBatchWriter,
     ) -> None:
-        caller = self.credentials_from_context_(context)
+        try:
+            caller = self.credentials_from_context_(context)
 
-        logger = log.bind(
-            **self.auth_logging_items(context, caller),
-            descriptor=descriptor,
-        )
+            logger = log.bind(
+                **self.auth_logging_items(context, caller),
+                descriptor=descriptor,
+            )
 
-        call_context = CallContext(
-            context=context,
-            caller=caller,
-            logger=logger,
-        )
+            call_context = CallContext(
+                context=context,
+                caller=caller,
+                logger=logger,
+            )
 
-        header_middleware = context.context.get_middleware("headers")
-        airport_operation_headers = header_middleware.client_headers.get("airport-operation")
-        if airport_operation_headers is not None and len(airport_operation_headers) > 0:
-            airport_operation = airport_operation_headers[0]
+            header_middleware = context.context.get_middleware("headers")
+            airport_operation_headers = header_middleware.client_headers.get("airport-operation")
+            if airport_operation_headers is not None and len(airport_operation_headers) > 0:
+                airport_operation = airport_operation_headers[0]
 
-            return_chunks_headers = header_middleware.client_headers.get("return-chunks")
-            if return_chunks_headers is None or len(return_chunks_headers) == 0:
-                raise flight.FlightServerError(
-                    "The return-chunks header is required for this operation."
-                )
-            return_chunks: bool = return_chunks_headers[0] == "1"
+                return_chunks_headers = header_middleware.client_headers.get("return-chunks")
+                if return_chunks_headers is None or len(return_chunks_headers) == 0:
+                    raise flight.FlightServerError(
+                        "The return-chunks header is required for this operation."
+                    )
+                return_chunks: bool = return_chunks_headers[0] == "1"
 
-            last_metadata: Any
-            if airport_operation == ExchangeOperation.INSERT:
-                keys_inserted = self.exchange_insert(
-                    context=call_context,
-                    descriptor=descriptor,
-                    reader=reader,
-                    writer=writer,
-                    return_chunks=return_chunks,
-                )
-                last_metadata = {"total_inserted": keys_inserted}
-            elif airport_operation == ExchangeOperation.UPDATE:
-                keys_updated = self.exchange_update(
-                    context=call_context,
-                    descriptor=descriptor,
-                    reader=reader,
-                    writer=writer,
-                    return_chunks=return_chunks,
-                )
-                last_metadata = {"total_updated": keys_updated}
-            elif airport_operation == ExchangeOperation.DELETE:
-                keys_deleted = self.exchange_delete(
-                    context=call_context,
-                    descriptor=descriptor,
-                    reader=reader,
-                    writer=writer,
-                    return_chunks=return_chunks,
-                )
-                last_metadata = {"total_deleted": keys_deleted}
-            else:
-                raise flight.FlightServerError(
-                    f"Unknown airport-operation header: {airport_operation}"
-                )
-            writer.write_metadata(msgpack.packb(last_metadata))
-            writer.close()
+                last_metadata: Any
+                if airport_operation == ExchangeOperation.INSERT:
+                    keys_inserted = self.exchange_insert(
+                        context=call_context,
+                        descriptor=descriptor,
+                        reader=reader,
+                        writer=writer,
+                        return_chunks=return_chunks,
+                    )
+                    last_metadata = {"total_inserted": keys_inserted}
+                elif airport_operation == ExchangeOperation.UPDATE:
+                    keys_updated = self.exchange_update(
+                        context=call_context,
+                        descriptor=descriptor,
+                        reader=reader,
+                        writer=writer,
+                        return_chunks=return_chunks,
+                    )
+                    last_metadata = {"total_updated": keys_updated}
+                elif airport_operation == ExchangeOperation.DELETE:
+                    keys_deleted = self.exchange_delete(
+                        context=call_context,
+                        descriptor=descriptor,
+                        reader=reader,
+                        writer=writer,
+                        return_chunks=return_chunks,
+                    )
+                    last_metadata = {"total_deleted": keys_deleted}
+                else:
+                    raise flight.FlightServerError(
+                        f"Unknown airport-operation header: {airport_operation}"
+                    )
+                writer.write_metadata(msgpack.packb(last_metadata))
+                writer.close()
 
-        return self.impl_do_exchange(
-            context=call_context,
-            descriptor=descriptor,
-            reader=reader,
-            writer=writer,
-        )
+            return self.impl_do_exchange(
+                context=call_context,
+                descriptor=descriptor,
+                reader=reader,
+                writer=writer,
+            )
+        except Exception as e:
+            logger.exception("do_exchange", error=str(e))
+            raise
 
     def impl_do_get(
         self,
@@ -676,24 +688,28 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     def do_get(
         self, context: flight.ServerCallContext, ticket: flight.Ticket
     ) -> flight.RecordBatchStream:
-        caller = self.credentials_from_context_(context)
+        try:
+            caller = self.credentials_from_context_(context)
 
-        logger = log.bind(
-            **self.auth_logging_items(context, caller),
-        )
+            logger = log.bind(
+                **self.auth_logging_items(context, caller),
+            )
 
-        logger.info("do_get", ticket=ticket)
+            logger.info("do_get", ticket=ticket)
 
-        call_context = CallContext(
-            context=context,
-            caller=caller,
-            logger=logger,
-        )
+            call_context = CallContext(
+                context=context,
+                caller=caller,
+                logger=logger,
+            )
 
-        return self.impl_do_get(
-            context=call_context,
-            ticket=ticket,
-        )
+            return self.impl_do_get(
+                context=call_context,
+                ticket=ticket,
+            )
+        except Exception as e:
+            logger.exception("do_get", error=str(e))
+            raise
 
     def impl_do_put(
         self,
@@ -712,23 +728,27 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         reader: flight.MetadataRecordBatchReader,
         writer: flight.FlightMetadataWriter,
     ) -> None:
-        caller = self.credentials_from_context_(context)
+        try:
+            caller = self.credentials_from_context_(context)
 
-        logger = log.bind(
-            **self.auth_logging_items(context, caller),
-        )
+            logger = log.bind(
+                **self.auth_logging_items(context, caller),
+            )
 
-        logger.info("do_put", descriptor=descriptor)
+            logger.info("do_put", descriptor=descriptor)
 
-        call_context = CallContext(
-            context=context,
-            caller=caller,
-            logger=logger,
-        )
+            call_context = CallContext(
+                context=context,
+                caller=caller,
+                logger=logger,
+            )
 
-        return self.impl_do_put(
-            context=call_context,
-            descriptor=descriptor,
-            reader=reader,
-            writer=writer,
-        )
+            return self.impl_do_put(
+                context=call_context,
+                descriptor=descriptor,
+                reader=reader,
+                writer=writer,
+            )
+        except Exception as e:
+            logger.exception("do_put", error=str(e))
+            raise
