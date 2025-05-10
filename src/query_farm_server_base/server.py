@@ -143,7 +143,10 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
                 self.action_change_column_type, action_decoders.change_column_type
             ),
             ActionType.CREATE_SCHEMA: ActionHandlerSpec(
-                self.action_create_schema, action_decoders.create_schema
+                self.action_create_schema,
+                action_decoders.create_schema,
+                lambda v: v.model_dump(),
+                False,
             ),
             ActionType.DROP_NOT_NULL: ActionHandlerSpec(
                 self.action_drop_not_null, action_decoders.drop_not_null
@@ -485,7 +488,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         *,
         context: CallContext[AccountType, TokenType],
         parameters: action_decoders.CreateSchemaParameters,
-    ) -> None:
+    ) -> AirportSerializedContentsWithSHA256Hash:
         pass
 
     def action_create_table(
