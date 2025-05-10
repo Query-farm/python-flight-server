@@ -672,6 +672,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
                     )
                 writer.write_metadata(msgpack.packb(last_metadata))
                 writer.close()
+                return
 
             return self.impl_do_exchange(
                 context=call_context,
