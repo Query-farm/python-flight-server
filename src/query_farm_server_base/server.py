@@ -112,6 +112,7 @@ class ActionHandlerSpec:
     decoder: Callable[[flight.Action], Any]
     post_transform: Callable[[Any], Any] | None = None
     empty_result: bool = True
+    pack_result: bool = True
 
 
 def compress_list_schemas_result(result: AirportSerializedCatalogRoot) -> list[Any]:
@@ -185,6 +186,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
                 self.action_create_table,
                 action_decoders.create_table,
                 lambda x: x.serialize(),
+                False,
                 False,
             ),
             ActionType.ENDPOINTS: ActionHandlerSpec(
@@ -535,7 +537,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
                 result = handler.post_transform(result)
             if handler.empty_result:
                 return iter([])
-            return self.pack_result(result)
+            return self.pack_result(result) if handler.pack_result else iter([result])
 
         logger.debug(action.type, action=action)
         return self.impl_do_action(
