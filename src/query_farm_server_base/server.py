@@ -624,7 +624,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
                 logger=logger,
             )
 
-            header_middleware = context.context.get_middleware("headers")
+            header_middleware = context.get_middleware("headers")
             airport_operation_headers = header_middleware.client_headers.get("airport-operation")
             if airport_operation_headers is not None and len(airport_operation_headers) > 0:
                 airport_operation = airport_operation_headers[0]
