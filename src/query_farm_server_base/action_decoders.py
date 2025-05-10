@@ -152,7 +152,7 @@ class CreateSchemaParameters(BaseModel):
 
 
 class CreateTransactionParameters(BaseModel):
-    identifier: str | None
+    catalog_name: str
 
 
 class DropNotNullParameters(AlterBase):
