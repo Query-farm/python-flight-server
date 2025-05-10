@@ -489,7 +489,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         context: CallContext[AccountType, TokenType],
         parameters: action_decoders.CreateSchemaParameters,
     ) -> AirportSerializedContentsWithSHA256Hash:
-        pass
+        self._unimplemented_action(ActionType.CREATE_SCHEMA)
 
     def action_create_table(
         self,
