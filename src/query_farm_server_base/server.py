@@ -67,12 +67,16 @@ P = ParamSpec("P")
 R = TypeVar("R")
 
 
+class ExchangeOperation(str, Enum):
+    INSERT = "insert"
+    UPDATE = "update"
+    DELETE = "delete"
+
+
 class ActionType(str, Enum):
     """
-    All supported Arrow Flight action types.
-
-    This enum provides a single source of truth for action type strings used
-    throughout the Flight server implementation.
+    These are the DoAction action types that are supported by calling the
+    separate action handlers.
     """
 
     # Schema modification actions
@@ -542,6 +546,42 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     ) -> None:
         raise NotImplementedError("impl_do_exchange not implemented")
 
+    def _unimplemented_exchange_operation(self, operation: ExchangeOperation) -> NoReturn:
+        raise flight.FlightUnavailableError(f"The {operation} operation is not implemented")
+
+    def exchange_insert(
+        self,
+        *,
+        context: CallContext[AccountType, TokenType],
+        descriptor: flight.FlightDescriptor,
+        reader: flight.MetadataRecordBatchReader,
+        writer: flight.MetadataRecordBatchWriter,
+        return_chunks: bool,
+    ) -> int:
+        self._unimplemented_exchange_operation(ExchangeOperation.INSERT)
+
+    def exchange_delete(
+        self,
+        *,
+        context: CallContext[AccountType, TokenType],
+        descriptor: flight.FlightDescriptor,
+        reader: flight.MetadataRecordBatchReader,
+        writer: flight.MetadataRecordBatchWriter,
+        return_chunks: bool,
+    ) -> int:
+        self._unimplemented_exchange_operation(ExchangeOperation.DELETE)
+
+    def exchange_update(
+        self,
+        *,
+        context: CallContext[AccountType, TokenType],
+        descriptor: flight.FlightDescriptor,
+        reader: flight.MetadataRecordBatchReader,
+        writer: flight.MetadataRecordBatchWriter,
+        return_chunks: bool,
+    ) -> int:
+        self._unimplemented_exchange_operation(ExchangeOperation.UPDATE)
+
     def do_exchange(
         self,
         context: flight.ServerCallContext,
@@ -561,6 +601,53 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
             caller=caller,
             logger=logger,
         )
+
+        header_middleware = context.context.get_middleware("headers")
+        airport_operation_headers = header_middleware.client_headers.get("airport-operation")
+        if airport_operation_headers is not None and len(airport_operation_headers) > 0:
+            airport_operation = airport_operation_headers[0]
+
+            return_chunks_headers = header_middleware.client_headers.get("return-chunks")
+            if return_chunks_headers is None or len(return_chunks_headers) == 0:
+                raise flight.FlightServerError(
+                    "The return-chunks header is required for this operation."
+                )
+            return_chunks: bool = return_chunks_headers[0] == "1"
+
+            last_metadata: Any
+            if airport_operation == ExchangeOperation.INSERT:
+                keys_inserted = self.exchange_insert(
+                    context=call_context,
+                    descriptor=descriptor,
+                    reader=reader,
+                    writer=writer,
+                    return_chunks=return_chunks,
+                )
+                last_metadata = {"total_inserted": keys_inserted}
+            elif airport_operation == ExchangeOperation.UPDATE:
+                keys_updated = self.exchange_update(
+                    context=call_context,
+                    descriptor=descriptor,
+                    reader=reader,
+                    writer=writer,
+                    return_chunks=return_chunks,
+                )
+                last_metadata = {"total_updated": keys_updated}
+            elif airport_operation == ExchangeOperation.DELETE:
+                keys_deleted = self.exchange_delete(
+                    context=call_context,
+                    descriptor=descriptor,
+                    reader=reader,
+                    writer=writer,
+                    return_chunks=return_chunks,
+                )
+                last_metadata = {"total_deleted": keys_deleted}
+            else:
+                raise flight.FlightServerError(
+                    f"Unknown airport-operation header: {airport_operation}"
+                )
+            writer.write_metadata(msgpack.packb(last_metadata))
+            writer.close()
 
         return self.impl_do_exchange(
             context=call_context,
