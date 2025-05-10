@@ -522,6 +522,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
             logger=logger,
         )
 
+        logger.info("pre action", action=action)
         if handler := self.action_handlers_.get(action.type):
             parameters = handler.decoder(action)
             logger.debug(action.type, parameters=parameters)
