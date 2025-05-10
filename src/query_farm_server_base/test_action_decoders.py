@@ -1,6 +1,7 @@
 import msgpack
-import pyarrow.flight as flight
 import pyarrow as pa
+import pyarrow.flight as flight
+
 from . import action_decoders
 
 

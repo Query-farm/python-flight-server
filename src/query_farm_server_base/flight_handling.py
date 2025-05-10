@@ -1,7 +1,7 @@
 import json
 from collections.abc import Callable, Generator
 from dataclasses import dataclass
-from typing import Any, TypeVar
+from typing import Any, Literal, TypeVar, get_args, get_origin
 
 import duckdb
 import immutables
@@ -36,6 +36,7 @@ class FlightTicketData(BaseModel):
 
         return FlightTicketData.model_validate(unpacked)
 
+
 T = TypeVar("T", bound=FlightTicketData)
 
 
@@ -61,16 +62,47 @@ def generate_record_batches_for_used_fields(
 def endpoint(
     *,
     ticket_data: T,
-    locations: list[str] | None = ["arrow-flight-reuse-connection://?"],
+    locations: list[str] | None = None,
 ) -> flight.FlightEndpoint:
     """Create a FlightEndpoint that allows metadata filtering to be passed
     back to the same server location"""
+    if locations is None:
+        locations = ["arrow-flight-reuse-connection://?"]
     packed_data = msgpack.packb(ticket_data.model_dump())
 
     return flight.FlightEndpoint(
         packed_data,
         locations,
     )
+
+
+def unpack_with_model_(source: bytes, model_cls: type[T]) -> T:
+    decode_fields: set[str] = set()
+    for name, field in model_cls.model_fields.items():
+        if isinstance(field.annotation, str) or (
+            get_origin(field.annotation) is list
+            and get_args(field.annotation) is str
+            or get_origin(field.annotation) is Literal
+        ):
+            decode_fields.add(name)
+
+    unpacked = msgpack.unpackb(
+        source,
+        raw=True,
+        object_hook=lambda s: {
+            k.decode("utf8"): v.decode("utf8") if k.decode("utf8") in decode_fields else v
+            for k, v in s.items()
+        },
+    )
+    return model_cls.model_validate(unpacked)
+
+
+def decode_ticket_model(
+    *,
+    ticket: flight.Ticket,
+    cls: type[T],
+) -> T:
+    return unpack_with_model_(ticket.ticket, cls)
 
 
 def decode_ticket(
@@ -91,9 +123,7 @@ def decode_ticket(
         parsed_headers = {"airport-duckdb-json-filters": basic_data.json_filters}
 
     if basic_data.column_ids and len(basic_data.column_ids) > 0:
-        parsed_headers["airport-duckdb-column-ids"] = ",".join(
-            map(str, basic_data.column_ids)
-        )
+        parsed_headers["airport-duckdb-column-ids"] = ",".join(map(str, basic_data.column_ids))
 
     decoded_ticket_data = model_selector(basic_data.flight_name, ticket.ticket)
     return decoded_ticket_data, parsed_headers

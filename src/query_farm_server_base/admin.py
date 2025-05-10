@@ -8,8 +8,8 @@ import click
 from prettytable import PrettyTable
 from pydantic import BaseModel, Field
 
-from . import auth_manager_dynamodb
 from . import auth_manager as am
+from . import auth_manager_dynamodb
 
 
 def validate_email(ctx: Any, param: Any, value: str) -> str:

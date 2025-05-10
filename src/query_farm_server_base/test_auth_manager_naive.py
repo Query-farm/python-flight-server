@@ -1,6 +1,3 @@
-import os
-from collections.abc import Generator, Sequence
-from typing import TypedDict
 
 import pytest
 

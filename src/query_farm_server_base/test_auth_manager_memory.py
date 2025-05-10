@@ -1,8 +1,4 @@
-import os
-from collections.abc import Generator, Sequence
-from typing import TypedDict
 
-import boto3
 import pytest
 
 from . import auth, auth_manager_memory

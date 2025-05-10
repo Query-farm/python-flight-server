@@ -1,8 +1,7 @@
-import functools
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
-from typing import Any, Generic, NoReturn, ParamSpec, TypeVar, cast
+from typing import Any, Generic, NoReturn, ParamSpec, TypeVar
 
 import msgpack
 import pyarrow.flight as flight

@@ -1,7 +1,7 @@
 import json
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import Any, Generic, Literal, TypeVar
+from typing import Any, Literal, TypeVar
 
 import boto3
 import structlog
@@ -9,7 +9,6 @@ from boto3.dynamodb.conditions import Key
 from cache3 import DiskCache
 from mypy_boto3_dynamodb.service_resource import Table
 from mypy_boto3_dynamodb.type_defs import (
-    PutItemOutputTableTypeDef,
     TableAttributeValueTypeDef,
 )
 
