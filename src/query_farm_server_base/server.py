@@ -629,7 +629,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
             if airport_operation_headers is not None and len(airport_operation_headers) > 0:
                 airport_operation = airport_operation_headers[0]
 
-                log.debug("do_exchange", airport_operation=airport_operation)
+                logger.debug("do_exchange", airport_operation=airport_operation)
 
                 return_chunks_headers = header_middleware.client_headers.get("return-chunks")
                 if return_chunks_headers is None or len(return_chunks_headers) == 0:
