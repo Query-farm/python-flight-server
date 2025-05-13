@@ -5,10 +5,11 @@ from enum import Enum
 from typing import Any, Generic, NoReturn, ParamSpec, TypeVar
 
 import msgpack
+import pyarrow as pa
 import pyarrow.flight as flight
 import structlog
 import zstandard as zstd
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, field_validator
 
 from query_farm_server_base import action_decoders
 
@@ -35,6 +36,15 @@ class CallContext(Generic[AccountType, TokenType]):
 class GetCatalogVersionResult(BaseModel):
     catalog_version: int
     is_fixed: bool
+
+
+class AlterTableResult(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)  # for Pydantic v2
+
+    arrow_schema: pa.Schema
+    _validate_arrow_schema = field_validator("arrow_schema", mode="before")(
+        action_decoders.deserialize_schema
+    )
 
 
 class CreateTransactionResult(BaseModel):
@@ -132,7 +142,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         self._location = location
         self.action_handlers_: dict[str, ActionHandlerSpec] = {
             ActionType.ADD_COLUMN: ActionHandlerSpec(
-                self.action_add_column, action_decoders.add_column
+                self.action_add_column, action_decoders.add_column, lambda v: v.model_dump(), False
             ),
             ActionType.ADD_CONSTRAINT: ActionHandlerSpec(
                 self.action_add_constraint, action_decoders.add_constraint
@@ -341,7 +351,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         *,
         context: CallContext[AccountType, TokenType],
         parameters: action_decoders.AddColumnParameters,
-    ) -> None:
+    ) -> AlterTableResult:
         self._unimplemented_action(ActionType.ADD_COLUMN)
 
     def action_add_constraint(
