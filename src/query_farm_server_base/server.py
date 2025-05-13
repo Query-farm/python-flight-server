@@ -38,15 +38,6 @@ class GetCatalogVersionResult(BaseModel):
     is_fixed: bool
 
 
-class AlterTableResult(BaseModel):
-    model_config = ConfigDict(arbitrary_types_allowed=True)  # for Pydantic v2
-
-    arrow_schema: pa.Schema
-    _validate_arrow_schema = field_validator("arrow_schema", mode="before")(
-        action_decoders.deserialize_schema
-    )
-
-
 class CreateTransactionResult(BaseModel):
     identifier: str | None
 
@@ -142,7 +133,11 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         self._location = location
         self.action_handlers_: dict[str, ActionHandlerSpec] = {
             ActionType.ADD_COLUMN: ActionHandlerSpec(
-                self.action_add_column, action_decoders.add_column, lambda v: v.model_dump(), False
+                self.action_add_column,
+                action_decoders.add_column,
+                lambda x: x.serialize(),
+                False,
+                False,
             ),
             ActionType.ADD_CONSTRAINT: ActionHandlerSpec(
                 self.action_add_constraint, action_decoders.add_constraint
@@ -351,7 +346,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         *,
         context: CallContext[AccountType, TokenType],
         parameters: action_decoders.AddColumnParameters,
-    ) -> AlterTableResult:
+    ) -> flight.FlightInfo:
         self._unimplemented_action(ActionType.ADD_COLUMN)
 
     def action_add_constraint(
