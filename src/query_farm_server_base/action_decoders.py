@@ -118,6 +118,7 @@ class AddConstraintParameters(AlterBase):
 
 class AddFieldParameters(AlterBase):
     model_config = ConfigDict(arbitrary_types_allowed=True)  # for Pydantic v2
+    column_path: list[str]
     column_schema: pa.Schema
     if_field_not_exists: bool
 
