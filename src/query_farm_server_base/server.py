@@ -140,13 +140,25 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
                 False,
             ),
             ActionType.ADD_CONSTRAINT: ActionHandlerSpec(
-                self.action_add_constraint, action_decoders.add_constraint
+                self.action_add_constraint,
+                action_decoders.add_constraint,
+                lambda x: x.serialize(),
+                False,
+                False,
             ),
             ActionType.ADD_FIELD: ActionHandlerSpec(
-                self.action_add_field, action_decoders.add_field
+                self.action_add_field,
+                action_decoders.add_field,
+                lambda x: x.serialize(),
+                False,
+                False,
             ),
             ActionType.CHANGE_COLUMN_TYPE: ActionHandlerSpec(
-                self.action_change_column_type, action_decoders.change_column_type
+                self.action_change_column_type,
+                action_decoders.change_column_type,
+                lambda x: x.serialize(),
+                False,
+                False,
             ),
             ActionType.CREATE_SCHEMA: ActionHandlerSpec(
                 self.action_create_schema,
@@ -155,7 +167,11 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
                 False,
             ),
             ActionType.DROP_NOT_NULL: ActionHandlerSpec(
-                self.action_drop_not_null, action_decoders.drop_not_null
+                self.action_drop_not_null,
+                action_decoders.drop_not_null,
+                lambda x: x.serialize(),
+                False,
+                False,
             ),
             ActionType.DROP_TABLE: ActionHandlerSpec(
                 self.action_drop_table, action_decoders.drop_table
@@ -164,25 +180,53 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
                 self.action_drop_schema, action_decoders.drop_schema
             ),
             ActionType.REMOVE_COLUMN: ActionHandlerSpec(
-                self.action_remove_column, action_decoders.remove_column
+                self.action_remove_column,
+                action_decoders.remove_column,
+                lambda x: x.serialize(),
+                False,
+                False,
             ),
             ActionType.REMOVE_FIELD: ActionHandlerSpec(
-                self.action_remove_field, action_decoders.remove_field
+                self.action_remove_field,
+                action_decoders.remove_field,
+                lambda x: x.serialize(),
+                False,
+                False,
             ),
             ActionType.RENAME_COLUMN: ActionHandlerSpec(
-                self.action_rename_column, action_decoders.rename_column
+                self.action_rename_column,
+                action_decoders.rename_column,
+                lambda x: x.serialize(),
+                False,
+                False,
             ),
             ActionType.RENAME_FIELD: ActionHandlerSpec(
-                self.action_rename_field, action_decoders.rename_field
+                self.action_rename_field,
+                action_decoders.rename_field,
+                lambda x: x.serialize(),
+                False,
+                False,
             ),
             ActionType.RENAME_TABLE: ActionHandlerSpec(
-                self.action_rename_table, action_decoders.rename_table
+                self.action_rename_table,
+                action_decoders.rename_table,
+                lambda x: x.serialize(),
+                False,
+                False,
             ),
             ActionType.SET_DEFAULT: ActionHandlerSpec(
-                self.action_set_default, action_decoders.set_default
+                self.action_set_default,
+                action_decoders.set_default,
+                lambda x: x.serialize(),
+                False,
+                False,
             ),
             ActionType.SET_NOT_NULL: ActionHandlerSpec(
-                self.action_set_not_null, action_decoders.set_not_null
+                self.action_set_not_null,
+                action_decoders.set_not_null,
+                lambda x: x.serialize(),
+                False,
+                False,
             ),
             ActionType.COLUMN_STATISTICS: ActionHandlerSpec(
                 self.action_column_statistics, action_decoders.column_statistics, None, False
@@ -354,7 +398,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         *,
         context: CallContext[AccountType, TokenType],
         parameters: action_decoders.AddConstraintParameters,
-    ) -> None:
+    ) -> flight.FlightInfo:
         self._unimplemented_action(ActionType.ADD_CONSTRAINT)
 
     def action_add_field(
@@ -362,7 +406,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         *,
         context: CallContext[AccountType, TokenType],
         parameters: action_decoders.AddFieldParameters,
-    ) -> None:
+    ) -> flight.FlightInfo:
         self._unimplemented_action(ActionType.ADD_FIELD)
 
     def action_change_column_type(
@@ -370,7 +414,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         *,
         context: CallContext[AccountType, TokenType],
         parameters: action_decoders.ChangeColumnTypeParameters,
-    ) -> None:
+    ) -> flight.FlightInfo:
         self._unimplemented_action(ActionType.CHANGE_COLUMN_TYPE)
 
     # FIXME: build a type for the column statistics, or switch over
@@ -389,7 +433,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         *,
         context: CallContext[AccountType, TokenType],
         parameters: action_decoders.DropNotNullParameters,
-    ) -> None:
+    ) -> flight.FlightInfo:
         self._unimplemented_action(ActionType.DROP_NOT_NULL)
 
     def action_drop_table(
@@ -421,7 +465,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         *,
         context: CallContext[AccountType, TokenType],
         parameters: action_decoders.RemoveColumnParameters,
-    ) -> None:
+    ) -> flight.FlightInfo:
         self._unimplemented_action(ActionType.REMOVE_COLUMN)
 
     def action_remove_field(
@@ -429,7 +473,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         *,
         context: CallContext[AccountType, TokenType],
         parameters: action_decoders.RemoveFieldParameters,
-    ) -> None:
+    ) -> flight.FlightInfo:
         self._unimplemented_action(ActionType.REMOVE_FIELD)
 
     def action_rename_column(
@@ -437,7 +481,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         *,
         context: CallContext[AccountType, TokenType],
         parameters: action_decoders.RenameColumnParameters,
-    ) -> None:
+    ) -> flight.FlightInfo:
         self._unimplemented_action(ActionType.RENAME_COLUMN)
 
     def action_rename_field(
@@ -445,7 +489,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         *,
         context: CallContext[AccountType, TokenType],
         parameters: action_decoders.RenameFieldParameters,
-    ) -> None:
+    ) -> flight.FlightInfo:
         self._unimplemented_action(ActionType.RENAME_FIELD)
 
     def action_rename_table(
@@ -453,7 +497,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         *,
         context: CallContext[AccountType, TokenType],
         parameters: action_decoders.RenameTableParameters,
-    ) -> None:
+    ) -> flight.FlightInfo:
         self._unimplemented_action(ActionType.RENAME_TABLE)
 
     def action_set_default(
@@ -461,7 +505,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         *,
         context: CallContext[AccountType, TokenType],
         parameters: action_decoders.SetDefaultParameters,
-    ) -> None:
+    ) -> flight.FlightInfo:
         self._unimplemented_action(ActionType.SET_DEFAULT)
 
     def action_set_not_null(
@@ -469,7 +513,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         *,
         context: CallContext[AccountType, TokenType],
         parameters: action_decoders.SetNotNullParameters,
-    ) -> None:
+    ) -> flight.FlightInfo:
         self._unimplemented_action(ActionType.SET_NOT_NULL)
 
     def action_table_function_flight_info(
