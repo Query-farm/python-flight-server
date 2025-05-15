@@ -650,7 +650,6 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         descriptor: flight.FlightDescriptor,
         reader: flight.MetadataRecordBatchReader,
         writer: flight.MetadataRecordBatchWriter,
-        return_chunks: bool,
     ) -> int:
         self._unimplemented_exchange_operation(ExchangeOperation.SCALAR_FUNCTION)
 
