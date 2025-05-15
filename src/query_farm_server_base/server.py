@@ -727,7 +727,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
                     )
                     last_metadata = {"total_deleted": keys_deleted}
                 elif airport_operation == ExchangeOperation.SCALAR_FUNCTION:
-                    self.scalar_function(
+                    self.exchange_scalar_function(
                         context=call_context,
                         descriptor=descriptor,
                         reader=reader,
