@@ -5,11 +5,10 @@ from enum import Enum
 from typing import Any, Generic, NoReturn, ParamSpec, TypeVar
 
 import msgpack
-import pyarrow as pa
 import pyarrow.flight as flight
 import structlog
 import zstandard as zstd
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel
 
 from query_farm_server_base import action_decoders
 
@@ -72,6 +71,7 @@ class ExchangeOperation(str, Enum):
     INSERT = "insert"
     UPDATE = "update"
     DELETE = "delete"
+    SCALAR_FUNCTION = "scalar_function"
 
 
 class ActionType(str, Enum):
@@ -118,6 +118,7 @@ class ActionHandlerSpec:
 
 def compress_list_schemas_result(result: AirportSerializedCatalogRoot) -> list[Any]:
     packed_data = msgpack.packb(result.model_dump())
+    assert packed_data
     compressor = zstd.ZstdCompressor(level=SCHEMA_TOP_LEVEL_COMPRESSION_LEVEL)
     compressed_data = compressor.compress(packed_data)
     return [len(packed_data), compressed_data]
@@ -310,14 +311,14 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     def list_flights(
         self, context: flight.ServerCallContext, criteria: bytes
     ) -> Iterator[flight.FlightInfo]:
+        caller = self.credentials_from_context_(context)
+
+        logger = log.bind(
+            **self.auth_logging_items(context, caller),
+            criteria=criteria,
+        )
+
         try:
-            caller = self.credentials_from_context_(context)
-
-            logger = log.bind(
-                **self.auth_logging_items(context, caller),
-                criteria=criteria,
-            )
-
             logger.info("list_flights", criteria=criteria)
 
             call_context = CallContext(
@@ -347,14 +348,13 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         context: flight.ServerCallContext,
         descriptor: flight.FlightDescriptor,
     ) -> flight.FlightInfo:
+        caller = self.credentials_from_context_(context)
+
+        logger = log.bind(
+            **self.auth_logging_items(context, caller),
+            descriptor=descriptor,
+        )
         try:
-            caller = self.credentials_from_context_(context)
-
-            logger = log.bind(
-                **self.auth_logging_items(context, caller),
-                descriptor=descriptor,
-            )
-
             logger.info(
                 "get_flight_info",
                 descriptor=descriptor,
@@ -567,18 +567,20 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         self._unimplemented_action(ActionType.DROP_SCHEMA)
 
     def pack_result(self, value: Any) -> Iterator[bytes]:
-        return iter([msgpack.packb(value)])
+        result = msgpack.packb(value)
+        assert result
+        return iter([result])
 
     def do_action(
         self, context: flight.ServerCallContext, action: flight.Action
     ) -> Iterator[bytes]:
+        caller = self.credentials_from_context_(context)
+
+        logger = log.bind(
+            **self.auth_logging_items(context, caller),
+        )
+
         try:
-            caller = self.credentials_from_context_(context)
-
-            logger = log.bind(
-                **self.auth_logging_items(context, caller),
-            )
-
             call_context = CallContext(
                 context=context,
                 caller=caller,
@@ -641,6 +643,17 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     ) -> int:
         self._unimplemented_exchange_operation(ExchangeOperation.DELETE)
 
+    def exchange_scalar_function(
+        self,
+        *,
+        context: CallContext[AccountType, TokenType],
+        descriptor: flight.FlightDescriptor,
+        reader: flight.MetadataRecordBatchReader,
+        writer: flight.MetadataRecordBatchWriter,
+        return_chunks: bool,
+    ) -> int:
+        self._unimplemented_exchange_operation(ExchangeOperation.SCALAR_FUNCTION)
+
     def exchange_update(
         self,
         *,
@@ -659,14 +672,13 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         reader: flight.MetadataRecordBatchReader,
         writer: flight.MetadataRecordBatchWriter,
     ) -> None:
+        caller = self.credentials_from_context_(context)
+
+        logger = log.bind(
+            **self.auth_logging_items(context, caller),
+            descriptor=descriptor,
+        )
         try:
-            caller = self.credentials_from_context_(context)
-
-            logger = log.bind(
-                **self.auth_logging_items(context, caller),
-                descriptor=descriptor,
-            )
-
             call_context = CallContext(
                 context=context,
                 caller=caller,
@@ -687,7 +699,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
                     )
                 return_chunks: bool = return_chunks_headers[0] == "1"
 
-                last_metadata: Any
+                last_metadata: Any = None
                 if airport_operation == ExchangeOperation.INSERT:
                     keys_inserted = self.exchange_insert(
                         context=call_context,
@@ -715,11 +727,19 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
                         return_chunks=return_chunks,
                     )
                     last_metadata = {"total_deleted": keys_deleted}
+                elif airport_operation == ExchangeOperation.SCALAR_FUNCTION:
+                    self.scalar_function(
+                        context=call_context,
+                        descriptor=descriptor,
+                        reader=reader,
+                        writer=writer,
+                    )
                 else:
                     raise flight.FlightServerError(
                         f"Unknown airport-operation header: {airport_operation}"
                     )
-                writer.write_metadata(msgpack.packb(last_metadata))
+                if airport_operation != ExchangeOperation.SCALAR_FUNCTION:
+                    writer.write_metadata(msgpack.packb(last_metadata))
                 writer.close()
                 return
 
@@ -744,13 +764,12 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     def do_get(
         self, context: flight.ServerCallContext, ticket: flight.Ticket
     ) -> flight.RecordBatchStream:
+        caller = self.credentials_from_context_(context)
+        logger = log.bind(
+            **self.auth_logging_items(context, caller),
+        )
+
         try:
-            caller = self.credentials_from_context_(context)
-
-            logger = log.bind(
-                **self.auth_logging_items(context, caller),
-            )
-
             logger.info("do_get", ticket=ticket)
 
             call_context = CallContext(
@@ -784,13 +803,12 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         reader: flight.MetadataRecordBatchReader,
         writer: flight.FlightMetadataWriter,
     ) -> None:
+        caller = self.credentials_from_context_(context)
+        logger = log.bind(
+            **self.auth_logging_items(context, caller),
+        )
+
         try:
-            caller = self.credentials_from_context_(context)
-
-            logger = log.bind(
-                **self.auth_logging_items(context, caller),
-            )
-
             logger.info("do_put", descriptor=descriptor)
 
             call_context = CallContext(
