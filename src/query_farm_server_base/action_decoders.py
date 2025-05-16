@@ -6,7 +6,9 @@ import pyarrow.flight as flight
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
-def serialize_record_batch(value: pa.RecordBatch, _info: Any) -> bytes:
+def serialize_record_batch(value: pa.RecordBatch, _info: Any) -> bytes | None:
+    if value is None:
+        return None
     sink = pa.BufferOutputStream()
     writer = pa.ipc.new_stream(sink, value.schema)
     writer.write_batch(value)
