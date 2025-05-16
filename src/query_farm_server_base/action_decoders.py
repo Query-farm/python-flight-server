@@ -55,7 +55,7 @@ def deserialize_schema(cls: Any, value: Any) -> pa.Schema:
 
 
 def deserialize_schema_or_none(cls: Any, value: Any) -> pa.Schema:
-    if value is None:
+    if value is None or value == b"":
         return None
     return deserialize_schema(cls, value)
 
