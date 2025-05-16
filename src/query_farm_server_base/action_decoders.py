@@ -21,7 +21,9 @@ def serialize_flight_descriptor(value: flight.FlightDescriptor, _info: Any) -> b
     return value.serialize()
 
 
-def deserialize_record_batch(cls: Any, value: Any) -> pa.Schema:
+def deserialize_record_batch(cls: Any, value: Any) -> pa.RecordBatch | None:
+    if value is None:
+        return None
     if isinstance(value, pa.RecordBatch):
         return value
     try:
@@ -34,8 +36,7 @@ def deserialize_record_batch(cls: Any, value: Any) -> pa.Schema:
             # Read the RecordBatch
             record_batch = next(ipc_stream)
             return record_batch
-
-        return pa.RecordBatch(value)
+        raise NotImplementedError("Unable to deserialize Arrow record batch")
     except Exception as e:
         raise ValueError(f"Invalid Arrow record batch: {e}") from e
 
