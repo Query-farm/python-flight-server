@@ -246,7 +246,7 @@ class TableFunctionFlightInfoParameters(BaseModel):
     parameters: pa.RecordBatch
     table_input_schema: pa.Schema | None
 
-    _validate_flight_descriptor = field_validator("flight_descriptor", mode="before")(
+    _validate_flight_descriptor = field_validator("descriptor", mode="before")(
         deserialize_flight_descriptor
     )
 
