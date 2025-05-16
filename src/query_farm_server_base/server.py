@@ -578,6 +578,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
 
         logger = log.bind(
             **self.auth_logging_items(context, caller),
+            action_type=action.type,
         )
 
         try:
