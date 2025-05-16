@@ -186,6 +186,12 @@ class EndpointsParametersParameters(BaseModel):
     json_filters: str
     column_ids: list[int]
 
+    table_function_parameters: pa.RecordBatch | None
+
+    _validate_table_function_parameters = field_validator(
+        "table_function_parameters", mode="before"
+    )(deserialize_record_batch)
+
 
 class EndpointsParameters(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)  # for Pydantic v2
@@ -243,7 +249,7 @@ class TableFunctionFlightInfoParameters(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)  # for Pydantic v2
     descriptor: flight.FlightDescriptor
 
-    parameters: pa.RecordBatch
+    parameters: pa.RecordBatch | None
     table_input_schema: pa.Schema | None
 
     _validate_flight_descriptor = field_validator("descriptor", mode="before")(
