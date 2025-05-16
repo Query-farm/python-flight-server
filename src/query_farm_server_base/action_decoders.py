@@ -183,6 +183,8 @@ class DropNotNullParameters(AlterBase):
 
 
 class EndpointsParametersParameters(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)  # for Pydantic v2
+
     json_filters: str
     column_ids: list[int]
 
