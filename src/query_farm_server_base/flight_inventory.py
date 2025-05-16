@@ -57,6 +57,7 @@ class FlightSchemaMetadata:
         self.name = name
         self.comment = comment
         self.input_schema = input_schema
+        assert action_name is None or action_name != ""
         self.action_name = action_name
 
     def serialize(self) -> bytes:
@@ -70,8 +71,9 @@ class FlightSchemaMetadata:
         }
         if self.input_schema:
             values_to_pack["input_schema"] = self.input_schema.serialize().to_pybytes()
-
-        return msgpack.packb(values_to_pack)
+        packed_values = msgpack.packb(values_to_pack)
+        assert packed_values
+        return packed_values
 
 
 FlightInventoryWithMetadata = tuple[flight.FlightInfo, FlightSchemaMetadata]
