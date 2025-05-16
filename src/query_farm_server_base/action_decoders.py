@@ -6,6 +6,19 @@ import pyarrow.flight as flight
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
+def serialize_record_batch(value: pa.RecordBatch, _info: Any) -> bytes:
+    sink = pa.BufferOutputStream()
+    writer = pa.ipc.new_stream(sink, value.schema)
+    writer.write_batch(value)
+    writer.close()
+
+    return sink.getvalue()
+
+
+def serialize_flight_descriptor(value: flight.FlightDescriptor, _info: Any) -> bytes:
+    return value.serialize()
+
+
 def deserialize_record_batch(cls: Any, value: Any) -> pa.Schema:
     if isinstance(value, pa.RecordBatch):
         return value
