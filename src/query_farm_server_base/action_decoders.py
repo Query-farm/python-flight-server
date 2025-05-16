@@ -54,6 +54,12 @@ def deserialize_schema(cls: Any, value: Any) -> pa.Schema:
         raise ValueError(f"Invalid Arrow schema: {e}") from e
 
 
+def deserialize_schema_or_none(cls: Any, value: Any) -> pa.Schema:
+    if value is None:
+        return None
+    return deserialize_schema(cls, value)
+
+
 def deserialize_flight_descriptor(cls: Any, value: Any) -> flight.FlightDescriptor:
     if isinstance(value, flight.FlightDescriptor):
         return value
@@ -239,12 +245,12 @@ class TableFunctionFlightInfoParameters(BaseModel):
     schema_name: str
     action_name: str
     parameters: pa.RecordBatch
-    table_input_schema: pa.Schema
+    table_input_schema: pa.Schema | None
 
     _validate_parameters = field_validator("parameters", mode="before")(deserialize_record_batch)
 
     _validate_table_input_schema = field_validator("table_input_schema", mode="before")(
-        deserialize_schema
+        deserialize_schema_or_none
     )
 
 
