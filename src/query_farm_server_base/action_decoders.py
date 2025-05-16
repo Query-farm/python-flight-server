@@ -41,6 +41,12 @@ def deserialize_record_batch(cls: Any, value: Any) -> pa.RecordBatch | None:
         raise ValueError(f"Invalid Arrow record batch: {e}") from e
 
 
+def deserialize_record_batch_or_none(cls: Any, value: Any) -> pa.RecordBatch | None:
+    if value is None or value == b"":
+        return None
+    return deserialize_record_batch(cls, value)
+
+
 def deserialize_schema(cls: Any, value: Any) -> pa.Schema:
     if isinstance(value, pa.Schema):
         return value
@@ -192,7 +198,7 @@ class EndpointsParametersParameters(BaseModel):
 
     _validate_table_function_parameters = field_validator(
         "table_function_parameters", mode="before"
-    )(deserialize_record_batch)
+    )(deserialize_record_batch_or_none)
 
 
 class EndpointsParameters(BaseModel):
@@ -251,7 +257,7 @@ class TableFunctionFlightInfoParameters(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)  # for Pydantic v2
     descriptor: flight.FlightDescriptor
 
-    parameters: pa.RecordBatch | None
+    parameters: pa.RecordBatch
     table_input_schema: pa.Schema | None
 
     _validate_flight_descriptor = field_validator("descriptor", mode="before")(
