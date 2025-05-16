@@ -14,7 +14,7 @@ def serialize_record_batch(value: pa.RecordBatch, _info: Any) -> bytes | None:
     writer.write_batch(value)
     writer.close()
 
-    return sink.getvalue()
+    return sink.getvalue().to_pybytes()
 
 
 def serialize_flight_descriptor(value: flight.FlightDescriptor, _info: Any) -> bytes:
