@@ -241,11 +241,14 @@ class CatalogVersionParameters(BaseModel):
 
 class TableFunctionFlightInfoParameters(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)  # for Pydantic v2
-    catalog: str
-    schema_name: str
-    action_name: str
+    descriptor: flight.FlightDescriptor
+
     parameters: pa.RecordBatch
     table_input_schema: pa.Schema | None
+
+    _validate_flight_descriptor = field_validator("flight_descriptor", mode="before")(
+        deserialize_flight_descriptor
+    )
 
     _validate_parameters = field_validator("parameters", mode="before")(deserialize_record_batch)
 
