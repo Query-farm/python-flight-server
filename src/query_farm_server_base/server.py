@@ -250,6 +250,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
                 action_decoders.table_function_flight_info,
                 lambda x: x.serialize(),
                 False,
+                False,
             ),
             ActionType.LIST_SCHEMAS: ActionHandlerSpec(
                 self.action_list_schemas,
