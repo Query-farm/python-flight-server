@@ -199,7 +199,13 @@ class DropNotNull(AlterBase):
     column_name: str
 
 
-class TableFunctionInOut(BaseModel):
+class TableFunctionParameters(BaseModel):
+    """
+    Because table functiosn can be called either via DoGet
+    or via DoExchange (in the case of in-out table functions),
+    these parameters are used for both cases to make things simpler.
+    """
+
     model_config = ConfigDict(arbitrary_types_allowed=True)  # for Pydantic v2
 
     json_filters: str
@@ -313,8 +319,8 @@ def table_function_flight_info(action: flight.Action) -> TableFunctionFlightInfo
     return unpack_with_model(action, TableFunctionFlightInfo)
 
 
-def table_function_in_out(value: bytes) -> TableFunctionInOut:
-    return unpack_bytes_with_model(value, TableFunctionInOut)
+def table_function_parameters(value: bytes) -> TableFunctionParameters:
+    return unpack_bytes_with_model(value, TableFunctionParameters)
 
 
 def catalog_version(action: flight.Action) -> CatalogVersion:

@@ -672,7 +672,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         *,
         context: CallContext[AccountType, TokenType],
         descriptor: flight.FlightDescriptor,
-        parameters: parameter_types.TableFunctionInOut,
+        parameters: parameter_types.TableFunctionParameters,
         input_schema: pa.Schema,
     ) -> tuple[pa.Schema, Generator[pa.RecordBatch, pa.RecordBatch, pa.RecordBatch]]:
         self._unimplemented_exchange_operation(ExchangeOperation.TABLE_FUNCTION_IN_OUT)
@@ -764,7 +764,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
                     assert chunk.data is None
                     assert chunk.app_metadata is not None
 
-                    parameters = parameter_types.table_function_in_out(chunk.app_metadata)
+                    parameters = parameter_types.table_function_parameters(chunk.app_metadata)
 
                     output_schema, generator = self.exchange_table_function_in_out(
                         context=call_context,
