@@ -2,11 +2,13 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Generic, NoReturn, ParamSpec, TypeVar
+from typing import Any, Generator, Generic, NoReturn, ParamSpec, TypeVar
 
 import msgpack
 import pyarrow.flight as flight
+import pyarrow as pa
 import structlog
+
 import zstandard as zstd
 from pydantic import BaseModel
 
@@ -23,6 +25,15 @@ log = structlog.get_logger()
 
 AccountType = TypeVar("AccountType", bound=auth.Account)
 TokenType = TypeVar("TokenType", bound=auth.AccountToken)
+
+
+def read_recordbatch(source: bytes) -> pa.RecordBatch:
+    """
+    Read a record batch from a byte string.
+    """
+    buffer = pa.BufferReader(source)
+    ipc_stream = pa.ipc.open_stream(buffer)
+    return next(ipc_stream)
 
 
 @dataclass
@@ -661,9 +672,8 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         *,
         context: CallContext[AccountType, TokenType],
         descriptor: flight.FlightDescriptor,
-        reader: flight.MetadataRecordBatchReader,
-        writer: flight.MetadataRecordBatchWriter,
-    ) -> None:
+        parameters: pa.RecordBatch,
+    ) -> tuple[pa.Schema, Generator[pa.RecordBatch, pa.RecordBatch, pa.RecordBatch]]:
         self._unimplemented_exchange_operation(ExchangeOperation.TABLE_FUNCTION_IN_OUT)
 
     def exchange_update(
@@ -747,12 +757,35 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
                         writer=writer,
                     )
                 elif airport_operation == ExchangeOperation.TABLE_FUNCTION_IN_OUT:
-                    self.exchange_table_function_in_out(
-                        context=call_context,
-                        descriptor=descriptor,
-                        reader=reader,
-                        writer=writer,
+                    # The parameters are sent as the first chunk of the read stream
+                    # as part of the metadata.
+                    chunk = next(reader)
+                    assert chunk.data is None
+                    assert chunk.app_metadata is not None
+
+                    parameters = read_recordbatch(chunk.app_metadata)
+
+                    output_schema, generator = self.exchange_table_function_in_out(
+                        context=call_context, descriptor=descriptor, parameters=parameters
                     )
+
+                    writer.begin(output_schema)
+                    # Prime the generator
+                    generator.send(None)
+
+                    for item in reader:
+                        assert item.data is not None
+                        result = generator.send(item.data)
+                        writer.write_batch(result)
+
+                    try:
+                        generator.send(None)
+                    except StopIteration as e:
+                        if e.value is not None:
+                            writer.write_batch(e.value)
+                    writer.write_metadata(b"finished")
+                    writer.close()
+
                 else:
                     raise flight.FlightServerError(
                         f"Unknown airport-operation header: {airport_operation}"
