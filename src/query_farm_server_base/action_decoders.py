@@ -1,5 +1,6 @@
 from typing import Any, Literal, TypeVar, get_args, get_origin  # noqa: UP035
 
+import io
 import msgpack
 import pyarrow as pa
 import pyarrow.flight as flight
@@ -15,6 +16,12 @@ def serialize_record_batch(value: pa.RecordBatch, _info: Any) -> bytes | None:
     writer.close()
 
     return sink.getvalue().to_pybytes()
+
+
+def serialize_schema(value: pa.Schema, _info: Any) -> bytes | None:
+    sink = io.BytesIO()
+    pa.ipc.write_schema(value, sink)
+    return sink.getvalue()
 
 
 def serialize_flight_descriptor(value: flight.FlightDescriptor, _info: Any) -> bytes:
@@ -195,10 +202,15 @@ class EndpointsParametersParameters(BaseModel):
     column_ids: list[int]
 
     table_function_parameters: pa.RecordBatch | None
+    table_function_input_schema: pa.Schema | None
 
     _validate_table_function_parameters = field_validator(
         "table_function_parameters", mode="before"
     )(deserialize_record_batch_or_none)
+
+    _validate_table_function_input_schema = field_validator(
+        "table_function_input_schema", mode="before"
+    )(deserialize_schema_or_none)
 
 
 class EndpointsParameters(BaseModel):
