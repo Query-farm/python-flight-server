@@ -72,6 +72,7 @@ class ExchangeOperation(str, Enum):
     UPDATE = "update"
     DELETE = "delete"
     SCALAR_FUNCTION = "scalar_function"
+    TABLE_FUNCTION_IN_OUT = "table_function_in_out"
 
 
 class ActionType(str, Enum):
@@ -655,6 +656,16 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
     ) -> None:
         self._unimplemented_exchange_operation(ExchangeOperation.SCALAR_FUNCTION)
 
+    def exchange_table_function_in_out(
+        self,
+        *,
+        context: CallContext[AccountType, TokenType],
+        descriptor: flight.FlightDescriptor,
+        reader: flight.MetadataRecordBatchReader,
+        writer: flight.MetadataRecordBatchWriter,
+    ) -> None:
+        self._unimplemented_exchange_operation(ExchangeOperation.TABLE_FUNCTION_IN_OUT)
+
     def exchange_update(
         self,
         *,
@@ -730,6 +741,13 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
                     last_metadata = {"total_deleted": keys_deleted}
                 elif airport_operation == ExchangeOperation.SCALAR_FUNCTION:
                     self.exchange_scalar_function(
+                        context=call_context,
+                        descriptor=descriptor,
+                        reader=reader,
+                        writer=writer,
+                    )
+                elif airport_operation == ExchangeOperation.TABLE_FUNCTION_IN_OUT:
+                    self.exchange_table_function_in_out(
                         context=call_context,
                         descriptor=descriptor,
                         reader=reader,
