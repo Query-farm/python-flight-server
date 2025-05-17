@@ -212,6 +212,9 @@ class TableFunctionParameters(BaseModel):
     column_ids: list[int]
     parameters: pa.RecordBatch | None
 
+    at_unit: str | None = None
+    at_value: str | None = None
+
     _validate_parameters = field_validator("parameters", mode="before")(
         deserialize_record_batch_or_none
     )
@@ -225,6 +228,9 @@ class EndpointsParameters(BaseModel):
 
     table_function_parameters: pa.RecordBatch | None
     table_function_input_schema: pa.Schema | None
+
+    at_unit: str | None = None
+    at_value: str | None = None
 
     _validate_table_function_parameters = field_validator(
         "table_function_parameters", mode="before"
@@ -303,6 +309,9 @@ class TableFunctionFlightInfo(BaseModel):
     # The schema of the table function's input if receiving a table as
     # part of an in-out table returning function.
     table_input_schema: pa.Schema | None
+
+    at_unit: str | None = None
+    at_value: str | None = None
 
     _validate_flight_descriptor = field_validator("descriptor", mode="before")(
         deserialize_flight_descriptor
