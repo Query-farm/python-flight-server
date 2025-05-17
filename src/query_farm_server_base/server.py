@@ -673,6 +673,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         context: CallContext[AccountType, TokenType],
         descriptor: flight.FlightDescriptor,
         parameters: parameter_types.TableFunctionInOut,
+        input_schema: pa.Schema,
     ) -> tuple[pa.Schema, Generator[pa.RecordBatch, pa.RecordBatch, pa.RecordBatch]]:
         self._unimplemented_exchange_operation(ExchangeOperation.TABLE_FUNCTION_IN_OUT)
 
@@ -769,6 +770,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
                         context=call_context,
                         descriptor=descriptor,
                         parameters=parameters,
+                        input_schema=reader.schema,
                     )
 
                     writer.begin(output_schema)
