@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Generator, Iterator
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Generator, Generic, NoReturn, ParamSpec, TypeVar
+from typing import Any, Generic, NoReturn, ParamSpec, TypeVar
 
 import msgpack
 import pyarrow as pa
@@ -708,102 +708,106 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
             )
 
             header_middleware = context.get_middleware("headers")
+            assert header_middleware
             airport_operation_headers = header_middleware.client_headers.get("airport-operation")
-            if airport_operation_headers is not None and len(airport_operation_headers) > 0:
-                airport_operation = airport_operation_headers[0]
 
-                logger.debug("do_exchange", airport_operation=airport_operation)
+            if airport_operation_headers is None or len(airport_operation_headers) == 0:
+                return self.impl_do_exchange(
+                    context=call_context,
+                    descriptor=descriptor,
+                    reader=reader,
+                    writer=writer,
+                )
 
-                return_chunks_headers = header_middleware.client_headers.get("return-chunks")
-                if return_chunks_headers is None or len(return_chunks_headers) == 0:
-                    raise flight.FlightServerError(
-                        "The return-chunks header is required for this operation."
-                    )
-                return_chunks: bool = return_chunks_headers[0] == "1"
+            airport_operation = airport_operation_headers[0]
+            logger.debug("do_exchange", airport_operation=airport_operation)
 
-                last_metadata: Any = None
-                if airport_operation == ExchangeOperation.INSERT:
-                    keys_inserted = self.exchange_insert(
-                        context=call_context,
-                        descriptor=descriptor,
-                        reader=reader,
-                        writer=writer,
-                        return_chunks=return_chunks,
-                    )
-                    last_metadata = {"total_inserted": keys_inserted}
-                elif airport_operation == ExchangeOperation.UPDATE:
-                    keys_updated = self.exchange_update(
-                        context=call_context,
-                        descriptor=descriptor,
-                        reader=reader,
-                        writer=writer,
-                        return_chunks=return_chunks,
-                    )
-                    last_metadata = {"total_updated": keys_updated}
-                elif airport_operation == ExchangeOperation.DELETE:
-                    keys_deleted = self.exchange_delete(
-                        context=call_context,
-                        descriptor=descriptor,
-                        reader=reader,
-                        writer=writer,
-                        return_chunks=return_chunks,
-                    )
-                    last_metadata = {"total_deleted": keys_deleted}
-                elif airport_operation == ExchangeOperation.SCALAR_FUNCTION:
-                    self.exchange_scalar_function(
-                        context=call_context,
-                        descriptor=descriptor,
-                        reader=reader,
-                        writer=writer,
-                    )
-                elif airport_operation == ExchangeOperation.TABLE_FUNCTION_IN_OUT:
-                    # The parameters are sent as the first chunk of the read stream
-                    # as part of the metadata.
-                    chunk = next(reader)
-                    assert chunk.data is None
-                    assert chunk.app_metadata is not None
+            return_chunks_headers = header_middleware.client_headers.get("return-chunks")
+            if return_chunks_headers is None or len(return_chunks_headers) == 0:
+                raise flight.FlightServerError(
+                    "The return-chunks header is required for this operation."
+                )
+            return_chunks: bool = return_chunks_headers[0] == "1"
 
-                    parameters = parameter_types.table_function_parameters(chunk.app_metadata)
+            last_metadata: Any = None
+            if airport_operation == ExchangeOperation.INSERT:
+                keys_inserted = self.exchange_insert(
+                    context=call_context,
+                    descriptor=descriptor,
+                    reader=reader,
+                    writer=writer,
+                    return_chunks=return_chunks,
+                )
+                last_metadata = {"total_inserted": keys_inserted}
+            elif airport_operation == ExchangeOperation.UPDATE:
+                keys_updated = self.exchange_update(
+                    context=call_context,
+                    descriptor=descriptor,
+                    reader=reader,
+                    writer=writer,
+                    return_chunks=return_chunks,
+                )
+                last_metadata = {"total_updated": keys_updated}
+            elif airport_operation == ExchangeOperation.DELETE:
+                keys_deleted = self.exchange_delete(
+                    context=call_context,
+                    descriptor=descriptor,
+                    reader=reader,
+                    writer=writer,
+                    return_chunks=return_chunks,
+                )
+                last_metadata = {"total_deleted": keys_deleted}
+            elif airport_operation == ExchangeOperation.SCALAR_FUNCTION:
+                self.exchange_scalar_function(
+                    context=call_context,
+                    descriptor=descriptor,
+                    reader=reader,
+                    writer=writer,
+                )
+            elif airport_operation == ExchangeOperation.TABLE_FUNCTION_IN_OUT:
+                # The parameters are sent as the first chunk of the read stream
+                # as part of the metadata.
+                chunk = next(reader)
+                assert chunk.data is None
+                assert chunk.app_metadata is not None
 
-                    output_schema, generator = self.exchange_table_function_in_out(
-                        context=call_context,
-                        descriptor=descriptor,
-                        parameters=parameters,
-                        input_schema=reader.schema,
-                    )
+                parameters = parameter_types.table_function_parameters(chunk.app_metadata)
 
-                    writer.begin(output_schema)
-                    # Prime the generator
+                output_schema, generator = self.exchange_table_function_in_out(
+                    context=call_context,
+                    descriptor=descriptor,
+                    parameters=parameters,
+                    input_schema=reader.schema,
+                )
+
+                writer.begin(output_schema)
+                # Prime the generator
+                generator.send(None)
+
+                for item in reader:
+                    assert item.data is not None
+                    result = generator.send(item.data)
+                    writer.write_batch(result)
+
+                try:
                     generator.send(None)
+                except StopIteration as e:
+                    if e.value is not None:
+                        writer.write_batch(e.value)
+            else:
+                raise flight.FlightServerError(
+                    f"Unknown airport-operation header: {airport_operation}"
+                )
+            if airport_operation not in (
+                ExchangeOperation.SCALAR_FUNCTION,
+                ExchangeOperation.TABLE_FUNCTION_IN_OUT,
+            ):
+                writer.write_metadata(msgpack.packb(last_metadata))
+            elif airport_operation == ExchangeOperation.TABLE_FUNCTION_IN_OUT:
+                # The last metadata is the end of the stream
+                writer.write_metadata(b"finished")
 
-                    for item in reader:
-                        assert item.data is not None
-                        result = generator.send(item.data)
-                        writer.write_batch(result)
-
-                    try:
-                        generator.send(None)
-                    except StopIteration as e:
-                        if e.value is not None:
-                            writer.write_batch(e.value)
-                    writer.write_metadata(b"finished")
-                    writer.close()
-
-                else:
-                    raise flight.FlightServerError(
-                        f"Unknown airport-operation header: {airport_operation}"
-                    )
-                if airport_operation != ExchangeOperation.SCALAR_FUNCTION:
-                    writer.write_metadata(msgpack.packb(last_metadata))
-                writer.close()
-                return
-
-            return self.impl_do_exchange(
-                context=call_context,
-                descriptor=descriptor,
-                reader=reader,
-                writer=writer,
-            )
+            writer.close()
         except Exception as e:
             logger.exception("do_exchange", error=str(e))
             raise
