@@ -254,10 +254,20 @@ class CatalogVersionParameters(BaseModel):
 
 
 class TableFunctionFlightInfoParameters(BaseModel):
+    """
+    Parameters for a table function flight info request.
+    """
+
     model_config = ConfigDict(arbitrary_types_allowed=True)  # for Pydantic v2
+
+    # The descriptor of the table function.
     descriptor: flight.FlightDescriptor
 
+    # The parameters passed to the table function.
     parameters: pa.RecordBatch
+
+    # The schema of the table function's input if receiving a table as
+    # part of an in-out table returning function.
     table_input_schema: pa.Schema | None
 
     _validate_flight_descriptor = field_validator("descriptor", mode="before")(
