@@ -19,6 +19,8 @@ def serialize_record_batch(value: pa.RecordBatch, _info: Any) -> bytes | None:
 
 
 def serialize_schema(value: pa.Schema, _info: Any) -> bytes | None:
+    if value is None:
+        return None
     return value.serialize().to_pybytes()
 
 
