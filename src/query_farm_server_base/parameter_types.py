@@ -1,6 +1,6 @@
+import io
 from typing import Any, Literal, TypeVar, get_args, get_origin  # noqa: UP035
 
-import io
 import msgpack
 import pyarrow as pa
 import pyarrow.flight as flight
@@ -84,7 +84,7 @@ def deserialize_flight_descriptor(cls: Any, value: Any) -> flight.FlightDescript
         raise ValueError(f"Invalid Flight descriptor: {e}") from e
 
 
-class CreateTableParameters(BaseModel):
+class CreateTable(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)  # for Pydantic v2
     catalog_name: str
     schema_name: str
@@ -103,7 +103,7 @@ class CreateTableParameters(BaseModel):
 T = TypeVar("T", bound=BaseModel)
 
 
-def unpack_with_model(action: flight.Action, model_cls: type[T]) -> T:
+def unpack_bytes_with_model(value: bytes, model_cls: type[T]) -> T:
     decode_fields: set[str] = set()
     for name, field in model_cls.model_fields.items():
         if isinstance(field.annotation, str) or (
@@ -114,7 +114,7 @@ def unpack_with_model(action: flight.Action, model_cls: type[T]) -> T:
             decode_fields.add(name)
 
     unpacked = msgpack.unpackb(
-        action.body.to_pybytes(),
+        value,
         raw=True,
         object_hook=lambda s: {
             k.decode("utf8"): v.decode("utf8") if k.decode("utf8") in decode_fields else v
@@ -124,7 +124,11 @@ def unpack_with_model(action: flight.Action, model_cls: type[T]) -> T:
     return model_cls.model_validate(unpacked)
 
 
-class DropObjectParameters(BaseModel):
+def unpack_with_model(action: flight.Action, model_cls: type[T]) -> T:
+    return unpack_bytes_with_model(action.body.to_pybytes(), model_cls)
+
+
+class DropObject(BaseModel):
     type: Literal["table", "schema"]
     catalog_name: str
     schema_name: str
@@ -139,7 +143,7 @@ class AlterBase(BaseModel):
     ignore_not_found: bool
 
 
-class AddColumnParameters(AlterBase):
+class AddColumn(AlterBase):
     model_config = ConfigDict(arbitrary_types_allowed=True)  # for Pydantic v2
     column_schema: pa.Schema
     if_column_not_exists: bool
@@ -147,11 +151,11 @@ class AddColumnParameters(AlterBase):
     _validate_column_schema = field_validator("column_schema", mode="before")(deserialize_schema)
 
 
-class AddConstraintParameters(AlterBase):
+class AddConstraint(AlterBase):
     constraint: str
 
 
-class AddFieldParameters(AlterBase):
+class AddField(AlterBase):
     model_config = ConfigDict(arbitrary_types_allowed=True)  # for Pydantic v2
     column_path: list[str]
     column_schema: pa.Schema
@@ -160,7 +164,7 @@ class AddFieldParameters(AlterBase):
     _validate_field_schema = field_validator("column_schema", mode="before")(deserialize_schema)
 
 
-class ChangeColumnTypeParameters(AlterBase):
+class ChangeColumnType(AlterBase):
     model_config = ConfigDict(arbitrary_types_allowed=True)  # for Pydantic v2
     column_schema: pa.Schema
     expression: str
@@ -168,7 +172,7 @@ class ChangeColumnTypeParameters(AlterBase):
     _validate_column_schema = field_validator("column_schema", mode="before")(deserialize_schema)
 
 
-class ColumnStatisticsParameters(AlterBase):
+class ColumnStatistics(AlterBase):
     model_config = ConfigDict(arbitrary_types_allowed=True)  # for Pydantic v2
     flight_descriptor: flight.FlightDescriptor
     column_name: str
@@ -179,7 +183,7 @@ class ColumnStatisticsParameters(AlterBase):
     )
 
 
-class CreateSchemaParameters(BaseModel):
+class CreateSchema(BaseModel):
     catalog_name: str
     schema_name: str = Field("schema_name", alias="schema")
 
@@ -187,15 +191,27 @@ class CreateSchemaParameters(BaseModel):
     tags: dict[str, str]
 
 
-class CreateTransactionParameters(BaseModel):
+class CreateTransaction(BaseModel):
     catalog_name: str
 
 
-class DropNotNullParameters(AlterBase):
+class DropNotNull(AlterBase):
     column_name: str
 
 
-class EndpointsParametersParameters(BaseModel):
+class TableFunctionInOut(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)  # for Pydantic v2
+
+    json_filters: str
+    column_ids: list[int]
+    parameters: pa.RecordBatch | None
+
+    _validate_parameters = field_validator("parameters", mode="before")(
+        deserialize_record_batch_or_none
+    )
+
+
+class EndpointsParameters(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)  # for Pydantic v2
 
     json_filters: str
@@ -213,59 +229,59 @@ class EndpointsParametersParameters(BaseModel):
     )(deserialize_schema_or_none)
 
 
-class EndpointsParameters(BaseModel):
+class Endpoints(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)  # for Pydantic v2
     descriptor: flight.FlightDescriptor
     _validate_descriptor = field_validator("descriptor", mode="before")(
         deserialize_flight_descriptor
     )
-    parameters: EndpointsParametersParameters
+    parameters: EndpointsParameters
 
 
-class ListSchemasParameters(BaseModel):
+class ListSchemas(BaseModel):
     catalog_name: str
 
 
-class RemoveColumnParameters(AlterBase):
+class RemoveColumn(AlterBase):
     removed_column: str
     if_column_exists: bool
     cascade: bool
 
 
-class RemoveFieldParameters(AlterBase):
+class RemoveField(AlterBase):
     column_path: list[str]
     if_column_exists: bool
     cascade: bool
 
 
-class RenameColumnParameters(AlterBase):
+class RenameColumn(AlterBase):
     old_name: str
     new_name: str
 
 
-class RenameFieldParameters(AlterBase):
+class RenameField(AlterBase):
     column_path: list[str]
     new_name: str
 
 
-class RenameTableParameters(AlterBase):
+class RenameTable(AlterBase):
     new_table_name: str
 
 
-class SetDefaultParameters(AlterBase):
+class SetDefault(AlterBase):
     column_name: str
     expression: str
 
 
-class SetNotNullParameters(AlterBase):
+class SetNotNull(AlterBase):
     column_name: str
 
 
-class CatalogVersionParameters(BaseModel):
+class CatalogVersion(BaseModel):
     catalog_name: str
 
 
-class TableFunctionFlightInfoParameters(BaseModel):
+class TableFunctionFlightInfo(BaseModel):
     """
     Parameters for a table function flight info request.
     """
@@ -293,89 +309,93 @@ class TableFunctionFlightInfoParameters(BaseModel):
     )
 
 
-def table_function_flight_info(action: flight.Action) -> TableFunctionFlightInfoParameters:
-    return unpack_with_model(action, TableFunctionFlightInfoParameters)
+def table_function_flight_info(action: flight.Action) -> TableFunctionFlightInfo:
+    return unpack_with_model(action, TableFunctionFlightInfo)
 
 
-def catalog_version(action: flight.Action) -> CatalogVersionParameters:
-    return unpack_with_model(action, CatalogVersionParameters)
+def table_function_in_out(value: bytes) -> TableFunctionInOut:
+    return unpack_bytes_with_model(value, TableFunctionInOut)
 
 
-def add_column(action: flight.Action) -> AddColumnParameters:
-    return unpack_with_model(action, AddColumnParameters)
+def catalog_version(action: flight.Action) -> CatalogVersion:
+    return unpack_with_model(action, CatalogVersion)
 
 
-def add_constraint(action: flight.Action) -> AddConstraintParameters:
-    return unpack_with_model(action, AddConstraintParameters)
+def add_column(action: flight.Action) -> AddColumn:
+    return unpack_with_model(action, AddColumn)
 
 
-def add_field(action: flight.Action) -> AddFieldParameters:
-    return unpack_with_model(action, AddFieldParameters)
+def add_constraint(action: flight.Action) -> AddConstraint:
+    return unpack_with_model(action, AddConstraint)
 
 
-def change_column_type(action: flight.Action) -> ChangeColumnTypeParameters:
-    return unpack_with_model(action, ChangeColumnTypeParameters)
+def add_field(action: flight.Action) -> AddField:
+    return unpack_with_model(action, AddField)
 
 
-def create_table(action: flight.Action) -> CreateTableParameters:
-    return unpack_with_model(action, CreateTableParameters)
+def change_column_type(action: flight.Action) -> ChangeColumnType:
+    return unpack_with_model(action, ChangeColumnType)
 
 
-def column_statistics(action: flight.Action) -> ColumnStatisticsParameters:
-    return unpack_with_model(action, ColumnStatisticsParameters)
+def create_table(action: flight.Action) -> CreateTable:
+    return unpack_with_model(action, CreateTable)
 
 
-def create_schema(action: flight.Action) -> CreateSchemaParameters:
-    return unpack_with_model(action, CreateSchemaParameters)
+def column_statistics(action: flight.Action) -> ColumnStatistics:
+    return unpack_with_model(action, ColumnStatistics)
 
 
-def create_transaction(action: flight.Action) -> CreateTransactionParameters:
-    return unpack_with_model(action, CreateTransactionParameters)
+def create_schema(action: flight.Action) -> CreateSchema:
+    return unpack_with_model(action, CreateSchema)
 
 
-def drop_not_null(action: flight.Action) -> DropNotNullParameters:
-    return unpack_with_model(action, DropNotNullParameters)
+def create_transaction(action: flight.Action) -> CreateTransaction:
+    return unpack_with_model(action, CreateTransaction)
 
 
-def drop_schema(action: flight.Action) -> DropObjectParameters:
-    return unpack_with_model(action, DropObjectParameters)
+def drop_not_null(action: flight.Action) -> DropNotNull:
+    return unpack_with_model(action, DropNotNull)
 
 
-def drop_table(action: flight.Action) -> DropObjectParameters:
-    return unpack_with_model(action, DropObjectParameters)
+def drop_schema(action: flight.Action) -> DropObject:
+    return unpack_with_model(action, DropObject)
 
 
-def endpoints(action: flight.Action) -> EndpointsParameters:
-    return unpack_with_model(action, EndpointsParameters)
+def drop_table(action: flight.Action) -> DropObject:
+    return unpack_with_model(action, DropObject)
 
 
-def list_schemas(action: flight.Action) -> ListSchemasParameters:
-    return unpack_with_model(action, ListSchemasParameters)
+def endpoints(action: flight.Action) -> Endpoints:
+    return unpack_with_model(action, Endpoints)
 
 
-def remove_column(action: flight.Action) -> RemoveColumnParameters:
-    return unpack_with_model(action, RemoveColumnParameters)
+def list_schemas(action: flight.Action) -> ListSchemas:
+    return unpack_with_model(action, ListSchemas)
 
 
-def remove_field(action: flight.Action) -> RemoveFieldParameters:
-    return unpack_with_model(action, RemoveFieldParameters)
+def remove_column(action: flight.Action) -> RemoveColumn:
+    return unpack_with_model(action, RemoveColumn)
 
 
-def rename_column(action: flight.Action) -> RenameColumnParameters:
-    return unpack_with_model(action, RenameColumnParameters)
+def remove_field(action: flight.Action) -> RemoveField:
+    return unpack_with_model(action, RemoveField)
 
 
-def rename_field(action: flight.Action) -> RenameFieldParameters:
-    return unpack_with_model(action, RenameFieldParameters)
+def rename_column(action: flight.Action) -> RenameColumn:
+    return unpack_with_model(action, RenameColumn)
 
 
-def rename_table(action: flight.Action) -> RenameTableParameters:
-    return unpack_with_model(action, RenameTableParameters)
+def rename_field(action: flight.Action) -> RenameField:
+    return unpack_with_model(action, RenameField)
 
 
-def set_default(action: flight.Action) -> SetDefaultParameters:
-    return unpack_with_model(action, SetDefaultParameters)
+def rename_table(action: flight.Action) -> RenameTable:
+    return unpack_with_model(action, RenameTable)
 
 
-def set_not_null(action: flight.Action) -> SetNotNullParameters:
-    return unpack_with_model(action, SetNotNullParameters)
+def set_default(action: flight.Action) -> SetDefault:
+    return unpack_with_model(action, SetDefault)
+
+
+def set_not_null(action: flight.Action) -> SetNotNull:
+    return unpack_with_model(action, SetNotNull)

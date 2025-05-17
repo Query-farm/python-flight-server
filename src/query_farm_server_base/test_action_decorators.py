@@ -3,7 +3,7 @@ from typing import Any
 
 import pyarrow.flight as flight
 
-from query_farm_server_base import action_decoders
+from query_farm_server_base import parameter_types
 
 from . import auth, auth_manager, server
 
@@ -33,7 +33,7 @@ def test_action_decorators() -> None:
             self,
             *,
             context: server.CallContext[auth.Account, auth.AccountToken],
-            parameters: action_decoders.CreateTransactionParameters,
+            parameters: parameter_types.CreateTransaction,
         ) -> server.CreateTransactionResult:
             return server.CreateTransactionResult(identifier="fake")
 
@@ -49,7 +49,7 @@ def test_action_decorators() -> None:
             self,
             *,
             context: server.CallContext[auth.Account, auth.AccountToken],
-            parameters: action_decoders.CatalogVersionParameters,
+            parameters: parameter_types.CatalogVersion,
         ) -> server.GetCatalogVersionResult:
             raise NotImplementedError("action_catalog_version not implemented")
 

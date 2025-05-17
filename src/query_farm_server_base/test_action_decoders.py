@@ -2,7 +2,7 @@ import msgpack
 import pyarrow as pa
 import pyarrow.flight as flight
 
-from . import action_decoders
+from . import parameter_types
 
 
 def test_decode_drop_table() -> None:
@@ -15,7 +15,7 @@ def test_decode_drop_table() -> None:
             "ignore_not_found": True,
         }
     )
-    decoded = action_decoders.drop_table(flight.Action("drop_table", serialized))
+    decoded = parameter_types.drop_table(flight.Action("drop_table", serialized))
     assert decoded.type == "table"
     assert decoded.catalog_name == "test_catalog"
     assert decoded.schema_name == "test_schema"
@@ -44,7 +44,7 @@ def test_decode_create_table() -> None:
         },
     )
 
-    decoded = action_decoders.create_table(flight.Action("create_table", serialized))
+    decoded = parameter_types.create_table(flight.Action("create_table", serialized))
     assert decoded.catalog_name == "test_catalog"
     assert decoded.schema_name == "test_schema"
     assert decoded.table_name == "test_table"
