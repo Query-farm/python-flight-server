@@ -5,10 +5,9 @@ from enum import Enum
 from typing import Any, Generator, Generic, NoReturn, ParamSpec, TypeVar
 
 import msgpack
-import pyarrow.flight as flight
 import pyarrow as pa
+import pyarrow.flight as flight
 import structlog
-
 import zstandard as zstd
 from pydantic import BaseModel
 
