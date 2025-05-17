@@ -19,9 +19,7 @@ def serialize_record_batch(value: pa.RecordBatch, _info: Any) -> bytes | None:
 
 
 def serialize_schema(value: pa.Schema, _info: Any) -> bytes | None:
-    sink = io.BytesIO()
-    pa.ipc.write_schema(value, sink)
-    return sink.getvalue()
+    return value.serialize().to_pybytes()
 
 
 def serialize_flight_descriptor(value: flight.FlightDescriptor, _info: Any) -> bytes:
