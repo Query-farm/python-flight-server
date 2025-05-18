@@ -548,7 +548,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         self,
         *,
         context: CallContext[AccountType, TokenType],
-        parameters: parameter_types.TableFunctionFlightInfo,
+        parameters: parameter_types.FlightInfo,
     ) -> flight.FlightInfo:
         self._unimplemented_action(ActionType.FLIGHT_INFO)
 
