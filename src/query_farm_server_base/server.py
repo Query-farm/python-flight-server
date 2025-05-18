@@ -264,7 +264,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
                 False,
                 False,
             ),
-            ActionType.TABLE_FUNCTION_FLIGHT_INFO: ActionHandlerSpec(
+            ActionType.FLIGHT_INFO: ActionHandlerSpec(
                 self.action_flight_info,
                 parameter_types.flight_info,
                 lambda x: x.serialize(),
