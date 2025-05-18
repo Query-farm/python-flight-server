@@ -324,6 +324,28 @@ class TableFunctionFlightInfo(BaseModel):
     )
 
 
+class FlightInfo(BaseModel):
+    """
+    Parameters for a table function flight info request.
+    """
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)  # for Pydantic v2
+
+    # The descriptor of the table function.
+    descriptor: flight.FlightDescriptor
+
+    at_unit: str | None = None
+    at_value: str | None = None
+
+    _validate_flight_descriptor = field_validator("descriptor", mode="before")(
+        deserialize_flight_descriptor
+    )
+
+
+def flight_info(action: flight.Action) -> FlightInfo:
+    return unpack_with_model(action, FlightInfo)
+
+
 def table_function_flight_info(action: flight.Action) -> TableFunctionFlightInfo:
     return unpack_with_model(action, TableFunctionFlightInfo)
 

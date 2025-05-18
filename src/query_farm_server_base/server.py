@@ -116,6 +116,7 @@ class ActionType(str, Enum):
     ENDPOINTS = "endpoints"
     LIST_SCHEMAS = "list_schemas"
     TABLE_FUNCTION_FLIGHT_INFO = "table_function_flight_info"
+    FLIGHT_INFO = "flight_info"
 
 
 @dataclass
@@ -259,6 +260,13 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
             ActionType.TABLE_FUNCTION_FLIGHT_INFO: ActionHandlerSpec(
                 self.action_table_function_flight_info,
                 parameter_types.table_function_flight_info,
+                lambda x: x.serialize(),
+                False,
+                False,
+            ),
+            ActionType.TABLE_FUNCTION_FLIGHT_INFO: ActionHandlerSpec(
+                self.action_flight_info,
+                parameter_types.flight_info,
                 lambda x: x.serialize(),
                 False,
                 False,
@@ -535,6 +543,14 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         parameters: parameter_types.TableFunctionFlightInfo,
     ) -> flight.FlightInfo:
         self._unimplemented_action(ActionType.TABLE_FUNCTION_FLIGHT_INFO)
+
+    def action_flight_info(
+        self,
+        *,
+        context: CallContext[AccountType, TokenType],
+        parameters: parameter_types.TableFunctionFlightInfo,
+    ) -> flight.FlightInfo:
+        self._unimplemented_action(ActionType.FLIGHT_INFO)
 
     @abstractmethod
     def action_catalog_version(
