@@ -1,3 +1,4 @@
+import base64
 import json
 from collections.abc import Callable, Generator
 from dataclasses import dataclass
@@ -75,6 +76,35 @@ def endpoint(
         packed_data,
         locations,
     )
+
+
+def dict_to_msgpack_data_uri(data: dict[str, Any]) -> str:
+    """
+    Convert a dictionary to a data URI with MessagePack encoding.
+    """
+    msgpack_bytes = msgpack.packb(data, use_bin_type=True)
+    assert msgpack_bytes
+
+    # Encode as base64 for inclusion in the data URI
+    b64_encoded = base64.b64encode(msgpack_bytes).decode("ascii")
+
+    # Construct the data URI
+    return f"data:application/msgpack;base64,{b64_encoded}"
+
+
+def dict_to_msgpack_duckdb_call_data_uri(data: dict[str, Any]) -> str:
+    """
+    Convert a dictionary to a data URI with MessagePack encoding for
+    duckdb function calls.
+    """
+    msgpack_bytes = msgpack.packb(data, use_bin_type=True)
+    assert msgpack_bytes
+
+    # Encode as base64 for inclusion in the data URI
+    b64_encoded = base64.b64encode(msgpack_bytes).decode("ascii")
+
+    # Construct the data URI
+    return f"data:application/x-msgpack-duckdb-function-call;base64,{b64_encoded}"
 
 
 def decode_ticket_model(source: flight.Ticket, model_cls: type[AnyModel]) -> AnyModel:
