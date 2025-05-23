@@ -1,4 +1,5 @@
 import base64
+import io
 import json
 from collections.abc import Callable, Generator
 from dataclasses import dataclass
@@ -76,6 +77,13 @@ def endpoint(
         packed_data,
         locations,
     )
+
+
+def serialize_arrow_ipc_table(table: pa.Table) -> bytes:
+    sink = io.BytesIO()
+    with pa.ipc.new_stream(sink, table.schema) as writer:
+        writer.write_table(table)
+    return sink.getvalue()
 
 
 def dict_to_msgpack_data_uri(data: dict[str, Any]) -> str:
