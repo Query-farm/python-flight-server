@@ -34,11 +34,6 @@ coverage==7.8.0
     # via pytest-cov
 cryptography==44.0.3
     # via moto
-duckdb==1.2.2
-    # via duckdb-query-tools
-    # via query-farm-server-base
-duckdb-query-tools @ git+https://github.com/Query-farm/duckdb-query-tools.git@5e27018771eefce8e4690e2f758ff84bb18f7823
-    # via query-farm-server-base
 execnet==2.1.1
     # via pytest-xdist
 filelock==3.18.0
@@ -47,8 +42,6 @@ fuzzywuzzy==0.18.0
     # via query-farm-server-base
 idna==3.10
     # via requests
-immutables==0.21
-    # via query-farm-server-base
 iniconfig==2.1.0
     # via pytest
 jinja2==3.1.6
@@ -118,9 +111,6 @@ sentry-sdk==2.27.0
     # via query-farm-server-base
 six==1.17.0
     # via python-dateutil
-sqlglot==26.16.4
-    # via duckdb-query-tools
-    # via query-farm-server-base
 structlog==25.3.0
     # via query-farm-server-base
 tblib==3.1.0

@@ -23,14 +23,7 @@ certifi==2025.4.26
     # via sentry-sdk
 click==8.1.8
     # via query-farm-server-base
-duckdb==1.2.2
-    # via duckdb-query-tools
-    # via query-farm-server-base
-duckdb-query-tools @ git+https://github.com/Query-farm/duckdb-query-tools.git@5e27018771eefce8e4690e2f758ff84bb18f7823
-    # via query-farm-server-base
 fuzzywuzzy==0.18.0
-    # via query-farm-server-base
-immutables==0.21
     # via query-farm-server-base
 jmespath==1.0.1
     # via boto3
@@ -63,9 +56,6 @@ sentry-sdk==2.27.0
     # via query-farm-server-base
 six==1.17.0
     # via python-dateutil
-sqlglot==26.16.4
-    # via duckdb-query-tools
-    # via query-farm-server-base
 structlog==25.3.0
     # via query-farm-server-base
 typing-extensions==4.13.2
