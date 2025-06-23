@@ -126,6 +126,7 @@ def expression_to_string(
             "INTEGER",
             "FLOAT",
             "DOUBLE",
+            "HUGEINT",
         ):
             return str(expression["value"]["value"])
         elif expression["value"]["type"]["id"] == "TIMESTAMP":
