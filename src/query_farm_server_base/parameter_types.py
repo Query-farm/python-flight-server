@@ -220,10 +220,33 @@ class TableFunctionParameters(BaseModel):
     )
 
 
+class FilterData(BaseModel):
+    filters: list[Any]
+    column_binding_names_by_index: list[str]
+
+
+def deserialize_json_filters(cls: Any, value: Any) -> FilterData | None:
+    if value is None or value == b"":
+        return None
+    try:
+        # handle both raw JSON string and parsed dict
+        if isinstance(value, bytes):
+            value = value.decode("utf-8")
+        if isinstance(value, str):
+            return FilterData.model_validate_json(value)
+        return FilterData.model_validate(value)
+    except Exception as e:
+        raise ValueError(f"Invalid filter data: {e}") from e
+
+
 class EndpointsParameters(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)  # for Pydantic v2
 
-    json_filters: str
+    json_filters: FilterData | None = None
+    _validate_json_filters = field_validator("json_filters", mode="before")(
+        deserialize_json_filters
+    )
+
     column_ids: list[int]
 
     table_function_parameters: pa.RecordBatch | None
