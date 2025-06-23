@@ -106,7 +106,7 @@ def expression_to_string(
     elif expression["expression_class"] == "BOUND_CONSTANT":
         if expression["value"]["is_null"]:
             return "null"
-        if expression["value"]["type"]["id"] in "VARCHAR":
+        if expression["value"]["type"]["id"] in ("VARCHAR", "BLOB", "BITSTRING", "BIT"):
             return _quote_string(expression["value"]["value"])
         elif expression["value"]["type"]["id"] == "BOOLEAN":
             return "True" if expression["value"]["value"] else "False"
@@ -119,7 +119,6 @@ def expression_to_string(
             "INTEGER",
             "FLOAT",
             "DOUBLE",
-            "BLOB",
         ):
             return str(expression["value"]["value"])
         elif expression["value"]["type"]["id"] == "TIMESTAMP_S":
