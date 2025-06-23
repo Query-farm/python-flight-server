@@ -121,6 +121,8 @@ def expression_to_string(
             "DOUBLE",
         ):
             return str(expression["value"]["value"])
+        elif expression["value"]["type"]["id"] == "TIMESTAMP":
+            return f"make_timestamp({expression['value']['value']}::bigint)"
         elif expression["value"]["type"]["id"] == "TIMESTAMP_S":
             return f"make_timestamp({expression['value']['value']}::bigint*1000000)"
         elif expression["value"]["type"]["id"] == "TIMESTAMP WITH TIME ZONE":
