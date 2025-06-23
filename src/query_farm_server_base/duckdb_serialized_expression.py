@@ -136,6 +136,9 @@ def expression_to_string(
             "UTINYINT",
         ):
             return str(expression["value"]["value"])
+        elif expression["value"]["type"]["id"] == "INTERVAL":
+            iv = expression["value"]["value"]
+            return "INTERVAL '" + f"{iv['months']} months {iv['days']} days {iv['micros']} us" + "'"
         elif expression["value"]["type"]["id"] == "TIMESTAMP":
             return f"make_timestamp({expression['value']['value']}::bigint)"
         elif expression["value"]["type"]["id"] == "TIMESTAMP_S":
