@@ -141,6 +141,8 @@ def expression_to_string(
             return "INTERVAL '" + f"{iv['months']} months {iv['days']} days {iv['micros']} us" + "'"
         elif expression["value"]["type"]["id"] == "TIMESTAMP":
             return f"make_timestamp({expression['value']['value']}::bigint)"
+        elif expression["value"]["type"]["id"] == "TIME":
+            return f"TIME '{expression['value']['value']}'"
         elif expression["value"]["type"]["id"] == "TIMESTAMP_S":
             return f"make_timestamp({expression['value']['value']}::bigint*1000000)"
         elif expression["value"]["type"]["id"] == "TIMESTAMP WITH TIME ZONE":
