@@ -145,8 +145,10 @@ def expression_to_string(
             return f"TIME '{expression['value']['value']}'"
         elif expression["value"]["type"]["id"] == "TIMESTAMP_S":
             return f"make_timestamp({expression['value']['value']}::bigint*1000000)"
-        elif expression["value"]["type"]["id"] == "TIMESTAMP WITH TIME ZONE":
+        elif expression["value"]["type"]["id"] == "TIMESTAMP_MS":
             return f"make_timestamp({expression['value']['value']}::bigint)"
+        #        elif expression["value"]["type"]["id"] == "TIMESTAMP WITH TIME ZONE":
+        #            return f"make_timestamp({expression['value']['value']}::bigint)"
         elif expression["value"]["type"]["id"] == "LIST":
             if expression["type"] == "VALUE_CONSTANT":
                 # So the children in this case aren't expressions, they are constants.
