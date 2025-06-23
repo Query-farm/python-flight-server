@@ -147,6 +147,8 @@ def expression_to_string(
             return f"make_timestamp({expression['value']['value']}::bigint*1000000)"
         elif expression["value"]["type"]["id"] == "TIMESTAMP_MS":
             return f"make_timestamp({expression['value']['value']}::bigint)"
+        elif expression["value"]["type"]["id"] == "TIMESTAMP_NS":
+            return f"make_timestamp_ns({expression['value']['value']}::bigint)"
         #        elif expression["value"]["type"]["id"] == "TIMESTAMP WITH TIME ZONE":
         #            return f"make_timestamp({expression['value']['value']}::bigint)"
         elif expression["value"]["type"]["id"] == "LIST":
