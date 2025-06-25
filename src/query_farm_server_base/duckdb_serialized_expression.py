@@ -1,5 +1,6 @@
 import base64
 import codecs
+import uuid
 from typing import Any
 
 
@@ -30,6 +31,25 @@ def decode_bitstring(data: bytes) -> str:
         bits = bits[padding_bits:]
 
     return bits
+
+
+def decode_uuid(value: dict[str, int]) -> str:
+    assert "upper" in value and "lower" in value, "Invalid GUID format"
+
+    # Handle the two's complement for the signed upper 64 bits
+    upper = value["upper"] & ((1 << 64) - 1)  # Convert to unsigned if needed
+    lower = value["lower"]
+
+    # Combine into 128-bit integer
+    combined = (upper << 64) | lower
+
+    # Convert to 16 bytes (big-endian)
+    bytes_ = combined.to_bytes(16, byteorder="big")
+
+    # Create UUID from bytes
+    u = uuid.UUID(bytes=bytes_)
+
+    return str(u)
 
 
 def varint_get_byte_array(blob: bytes) -> tuple[list[int], bool]:
@@ -212,10 +232,11 @@ def expression_to_string(
                 )
 
             return varint_to_varchar(varint_bytes)
+        elif expression["value"]["type"]["id"] == "UUID":
+            return decode_uuid(expression["value"]["value"])
         elif expression["value"]["type"]["id"] in (
             "VARCHAR",
             "BLOB",
-            "UUID",
         ):
             return _quote_string(expression["value"]["value"])
         elif expression["value"]["type"]["id"] == "BIT":
