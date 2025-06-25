@@ -1,8 +1,100 @@
+import base64
+import codecs
 from typing import Any
 
 
 def _quote_string(value: str) -> str:
+    assert isinstance(value, str)
     return f"'{value}'"
+
+
+def decode_base64_value(value: Any) -> bytes:
+    assert "base64" in value
+    return base64.b64decode(value["base64"])
+
+
+def decode_bitstring(data: bytes) -> str:
+    if not data or len(data) < 2:
+        return ""
+
+    padding_bits = data[0]
+    bit_data = data[1:]
+
+    # Convert all bytes to bits
+    bits = "".join(f"{byte:08b}" for byte in bit_data)
+
+    # Remove the padding bits from the end
+    if padding_bits:
+        bits = bits[padding_bits:]
+
+    return bits
+
+
+def varint_get_byte_array(blob: bytes) -> tuple[list[int], bool]:
+    if len(blob) < 4:
+        raise ValueError("Invalid blob size.")
+
+    # Determine if the number is negative
+    is_negative = (blob[0] & 0x80) == 0
+
+    # Extract byte array starting from the 4th byte
+    if is_negative:
+        byte_array = [~b & 0xFF for b in blob[3:]]  # Apply bitwise NOT and mask to 8 bits
+    else:
+        byte_array = list(blob[3:])
+
+    return byte_array, is_negative
+
+
+def varint_to_varchar(blob: bytes) -> str:
+    decimal_string = ""
+    byte_array, is_negative = varint_get_byte_array(blob)
+    digits: list[int] = []
+
+    # Constants matching your C++ code (update if needed)
+    DIGIT_BYTES = 4  # Assuming 4 bytes per digit (like a uint32_t)
+    DIGIT_BITS = 32
+    DECIMAL_BASE = 1000000000  # Typically 10^9 for efficient base conversion
+    DECIMAL_SHIFT = 9  # Number of decimal digits in DECIMAL_BASE
+
+    # Pad the byte array so we can process in DIGIT_BYTES chunks without conditionals
+    padding_size = (-len(byte_array)) & (DIGIT_BYTES - 1)
+    byte_array = [0] * padding_size + byte_array
+
+    for i in range(0, len(byte_array), DIGIT_BYTES):
+        hi = 0
+        for j in range(DIGIT_BYTES):
+            hi |= byte_array[i + j] << (8 * (DIGIT_BYTES - j - 1))
+
+        for j in range(len(digits)):
+            tmp = (digits[j] << DIGIT_BITS) | hi
+            hi = tmp // DECIMAL_BASE
+            digits[j] = tmp - DECIMAL_BASE * hi
+
+        while hi:
+            digits.append(hi % DECIMAL_BASE)
+            hi //= DECIMAL_BASE
+
+    if not digits:
+        digits.append(0)
+
+    for i in range(len(digits) - 1):
+        remain = digits[i]
+        for _ in range(DECIMAL_SHIFT):
+            decimal_string += str(remain % 10)
+            remain //= 10
+
+    remain = digits[-1]
+    while remain != 0:
+        decimal_string += str(remain % 10)
+        remain //= 10
+
+    if is_negative:
+        decimal_string += "-"
+
+    # Reverse the string to get the correct number
+    decimal_string = decimal_string[::-1]
+    return decimal_string if decimal_string else "0"
 
 
 comparison_type_to_operator: dict[str, str] = {
@@ -24,7 +116,7 @@ def comparison_type_to_string_(comparison_type: str) -> str:
     raise NotImplementedError(f"Comparison type {comparison_type} is not supported")
 
 
-simple_types = {
+non_parameterized_duckdb_types = {
     "BIGINT",
     "BIT",
     "BLOB",
@@ -70,7 +162,7 @@ def _type_to_sql_type(type: dict[str, Any]) -> str:
             )
             + ")"
         )
-    elif type["id"] in simple_types:
+    elif type["id"] in non_parameterized_duckdb_types:
         return type["id"]
     elif type["id"] == "DECIMAL":
         return f"DECIMAL({type['type_info']['width']}, {type['type_info']['scale']})"
@@ -106,15 +198,36 @@ def expression_to_string(
     elif expression["expression_class"] == "BOUND_CONSTANT":
         if expression["value"]["is_null"]:
             return "null"
-        if expression["value"]["type"]["id"] in (
+        elif expression["value"]["type"]["id"] == "VARINT":
+            varint_value = expression["value"]["value"]
+            if isinstance(varint_value, str):
+                varint_bytes = codecs.decode(varint_value, "unicode_escape").encode("utf-8")
+            elif "base64" in varint_value:
+                varint_bytes = decode_base64_value(varint_value)
+            else:
+                raise Exception(
+                    "Varint value must be a base64 encoded string or a string with unicode escape sequences"
+                )
+
+            return varint_to_varchar(varint_bytes)
+        elif expression["value"]["type"]["id"] in (
             "VARCHAR",
             "BLOB",
-            "BITSTRING",
-            "BIT",
-            "VARINT",
             "UUID",
         ):
             return _quote_string(expression["value"]["value"])
+        elif expression["value"]["type"]["id"] == "BIT":
+            bit_value = expression["value"]["value"]
+
+            if isinstance(bit_value, str):
+                bitstring_bytes = codecs.decode(bit_value, "unicode_escape").encode("utf-8")
+            elif "base64" in bit_value:
+                bitstring_bytes = decode_base64_value(bit_value)
+            else:
+                raise Exception(
+                    "Bit string value must be a base64 encoded string or a string with unicode escape sequences"
+                )
+            return decode_bitstring(bitstring_bytes)
         elif expression["value"]["type"]["id"] == "BOOLEAN":
             return "True" if expression["value"]["value"] else "False"
         elif expression["value"]["type"]["id"] == "NULL":
