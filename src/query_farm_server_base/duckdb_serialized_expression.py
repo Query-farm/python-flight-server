@@ -4,6 +4,8 @@ from typing import Any
 
 
 def _quote_string(value: str) -> str:
+    if not isinstance(value, str):
+        breakpoint()
     assert isinstance(value, str)
     return f"'{value}'"
 
