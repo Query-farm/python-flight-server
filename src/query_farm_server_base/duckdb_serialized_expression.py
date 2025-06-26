@@ -52,9 +52,9 @@ def decode_uuid(value: dict[str, int]) -> str:
 
 
 def decode_date(days: int) -> str:
-    if days == -2_147_483_648:
+    if days == -2147483647:
         return "'-infinity'"
-    elif days == 2_147_483_647:
+    elif days == 2147483648:
         return "'infinity'"
     formatted_date = (date(1970, 1, 1) + timedelta(days=days)).isoformat()
     return f"'{formatted_date}'"
