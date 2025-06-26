@@ -55,7 +55,7 @@ def interpret_real(value: Any) -> str:
 
 
 def interpret_timestamp_ms(value: int) -> str:
-    dt = datetime.fromtimestamp(value / 1000, tz=timezone.UTC)
+    dt = datetime.fromtimestamp(value / 1000, tz=timezone.utc)
     return dt.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]  # Trim to milliseconds
 
 
