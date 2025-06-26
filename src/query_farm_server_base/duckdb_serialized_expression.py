@@ -1,9 +1,10 @@
 import base64
 import codecs
+import math
 import uuid
 from datetime import date, timedelta
-from typing import Any
 from decimal import Decimal
+from typing import Any
 
 
 def _quote_string(value: str) -> str:
@@ -34,11 +35,11 @@ def decode_bitstring(data: bytes) -> str:
 
 
 def interpret_real(value: Any) -> str:
-    if value == "inf":
-        return "'infinity'"
-    elif value == "-inf":
+    if math.isinf(value):
+        if value > 0:
+            return "'infinity'"
         return "'-infinity'"
-    elif value == "nan":
+    elif math.isnan(value):
         return "'nan'"
     return value
 
@@ -307,7 +308,6 @@ def expression_to_string(
             decimal_value = interpret_decimal(expression["value"])
             return str(decimal_value)
         elif expression["value"]["type"]["id"] in ("FLOAT", "DOUBLE"):
-            breakpoint()
             return interpret_real(expression["value"]["value"])
         elif expression["value"]["type"]["id"] in (
             "BIGINT",
