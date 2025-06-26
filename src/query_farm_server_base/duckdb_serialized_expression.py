@@ -1,6 +1,7 @@
 import base64
 import codecs
 import uuid
+from datetime import date, timedelta
 from typing import Any
 
 
@@ -48,6 +49,15 @@ def decode_uuid(value: dict[str, int]) -> str:
     u = uuid.UUID(bytes=bytes_)
 
     return str(u)
+
+
+def decode_date(days: int) -> str:
+    if days == -2_147_483_648:
+        return "'-infinity'"
+    elif days == 2_147_483_647:
+        return "'infinity'"
+    formatted_date = (date(1970, 1, 1) + timedelta(days=days)).isoformat()
+    return f"'{formatted_date}'"
 
 
 def varint_get_byte_array(blob: bytes) -> tuple[list[int], bool]:
@@ -253,8 +263,9 @@ def expression_to_string(
             return "True" if expression["value"]["value"] else "False"
         elif expression["value"]["type"]["id"] == "NULL":
             return "null"
+        elif expression["value"]["type"]["id"] == "DATE":
+            return decode_date(expression["value"]["value"])
         elif expression["value"]["type"]["id"] in (
-            "DATE",
             "DECIMAL",
             "BIGINT",
             "INTEGER",
