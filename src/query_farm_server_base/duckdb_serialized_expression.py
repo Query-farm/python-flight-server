@@ -59,6 +59,12 @@ def interpret_timestamp_ms(value: int) -> str:
     return dt.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]  # Trim to milliseconds
 
 
+def interpret_uhugeint(value: dict[str, Any]) -> str:
+    upper = value["upper"]
+    lower = value["lower"]
+    return str((upper << 64) | lower)
+
+
 def decode_uuid(value: dict[str, int]) -> str:
     assert "upper" in value and "lower" in value, "Invalid GUID format"
 
@@ -324,6 +330,8 @@ def expression_to_string(
             return str(decimal_value)
         elif expression["value"]["type"]["id"] in ("FLOAT", "DOUBLE"):
             return interpret_real(expression["value"]["value"])
+        elif expression["value"]["type"]["id"] == "UHUGEINT":
+            return interpret_uhugeint(expression["value"]["value"])
         elif expression["value"]["type"]["id"] in (
             "BIGINT",
             "INTEGER",
@@ -331,7 +339,6 @@ def expression_to_string(
             "TINYINT",
             "SMALLINT",
             "UBIGINT",
-            "UHUGEINT",
             "UINTEGER",
             "USMALLINT",
             "UTINYINT",
