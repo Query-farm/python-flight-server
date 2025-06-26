@@ -2,7 +2,7 @@ import base64
 import codecs
 import math
 import uuid
-from datetime import date, timedelta
+from datetime import date, timedelta, time
 from decimal import Decimal
 from typing import Any
 
@@ -32,6 +32,16 @@ def decode_bitstring(data: bytes) -> str:
         bits = bits[padding_bits:]
 
     return bits
+
+
+def interpret_time(value: int) -> str:
+    t = timedelta(milliseconds=value)
+    hours, remainder = divmod(t.seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    milliseconds = t.microseconds // 1000
+
+    result = time(hours, minutes, seconds, milliseconds * 1000)
+    return result.strftime("%H:%M:%S.%f")
 
 
 def interpret_real(value: Any) -> str:
@@ -330,7 +340,7 @@ def expression_to_string(
         elif expression["value"]["type"]["id"] == "TIMESTAMP WITH TIME ZONE":
             return f"to_timestamp({expression['value']['value']}::bigint)"
         elif expression["value"]["type"]["id"] == "TIME":
-            return f"TIME '{expression['value']['value']}'"
+            return f"TIME {interpret_time(expression['value']['value'])}"
         elif expression["value"]["type"]["id"] == "TIMESTAMP_S":
             return f"make_timestamp({expression['value']['value']}::bigint*1000000)"
         elif expression["value"]["type"]["id"] == "TIMESTAMP_MS":
