@@ -65,6 +65,8 @@ def interpret_decimal(value: dict[str, Any]) -> Decimal:
     type_info = value["type"]["type_info"]
     scale = type_info["scale"]
     v = value["value"]
+    if not isinstance(v, int):
+        breakpoint()
     return Decimal(v) / Decimal(10) ** scale
 
 
