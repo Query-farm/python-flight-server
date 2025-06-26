@@ -219,19 +219,14 @@ class DropNotNull(AlterBase):
 
 class TableFunctionParameters(BaseModel):
     """
-    Because table functiosn can be called either via DoGet
+    Because table functions can be called either via DoGet
     or via DoExchange (in the case of in-out table functions),
     these parameters are used for both cases to make things simpler.
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True)  # for Pydantic v2
 
-    json_filters: FilterData | None = None
-    _validate_json_filters = field_validator("json_filters", mode="before")(
-        deserialize_json_filters
-    )
-
-    column_ids: list[int]
+    where_clause: str | None = None
     parameters: pa.RecordBatch | None
 
     at_unit: str | None = None
