@@ -307,6 +307,7 @@ def expression_to_string(
             decimal_value = interpret_decimal(expression["value"])
             return str(decimal_value)
         elif expression["value"]["type"]["id"] in ("FLOAT", "DOUBLE"):
+            breakpoint()
             return interpret_real(expression["value"]["value"])
         elif expression["value"]["type"]["id"] in (
             "BIGINT",
