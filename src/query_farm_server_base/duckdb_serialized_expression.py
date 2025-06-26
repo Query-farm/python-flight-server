@@ -5,6 +5,7 @@ import uuid
 from datetime import date, timedelta, time
 from decimal import Decimal
 from typing import Any
+from datetime import datetime, timezone
 
 
 def _quote_string(value: str) -> str:
@@ -35,7 +36,7 @@ def decode_bitstring(data: bytes) -> str:
 
 
 def interpret_time(value: int) -> str:
-    t = timedelta(microseconds=value)
+    t = timedelta(milliseconds=value)
     hours, remainder = divmod(t.seconds, 3600)
     minutes, seconds = divmod(remainder, 60)
 
@@ -51,6 +52,11 @@ def interpret_real(value: Any) -> str:
     elif math.isnan(value):
         return "'nan'"
     return value
+
+
+def interpret_timestamp_ms(value: int) -> str:
+    dt = datetime.fromtimestamp(value / 1000, tz=timezone.UTC)
+    return dt.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]  # Trim to milliseconds
 
 
 def decode_uuid(value: dict[str, int]) -> str:
@@ -343,7 +349,7 @@ def expression_to_string(
         elif expression["value"]["type"]["id"] == "TIMESTAMP_S":
             return f"make_timestamp({expression['value']['value']}::bigint*1000000)"
         elif expression["value"]["type"]["id"] == "TIMESTAMP_MS":
-            return f"make_timestamp({expression['value']['value']}::bigint)"
+            return f"'{interpret_timestamp_ms(expression['value']['value'])}'"
         elif expression["value"]["type"]["id"] == "TIMESTAMP_NS":
             return f"make_timestamp_ns({expression['value']['value']}::bigint)"
         #        elif expression["value"]["type"]["id"] == "TIMESTAMP WITH TIME ZONE":
