@@ -3,6 +3,7 @@ import codecs
 import uuid
 from datetime import date, timedelta
 from typing import Any
+from decimal import Decimal
 
 
 def _quote_string(value: str) -> str:
@@ -58,6 +59,13 @@ def decode_date(days: int) -> str:
         return "'infinity'"
     formatted_date = (date(1970, 1, 1) + timedelta(days=days)).isoformat()
     return f"'{formatted_date}'"
+
+
+def interpret_decimal(value: dict[str, Any]) -> Decimal:
+    type_info = value["type"]["type_info"]
+    scale = type_info["scale"]
+    v = value["value"]
+    return Decimal(v) / (10**scale)
 
 
 def varint_get_byte_array(blob: bytes) -> tuple[list[int], bool]:
@@ -265,8 +273,10 @@ def expression_to_string(
             return "null"
         elif expression["value"]["type"]["id"] == "DATE":
             return decode_date(expression["value"]["value"])
+        elif expression["value"]["type"]["id"] == "DECIMAL":
+            decimal_value = interpret_decimal(expression["value"])
+            return str(decimal_value)
         elif expression["value"]["type"]["id"] in (
-            "DECIMAL",
             "BIGINT",
             "INTEGER",
             "FLOAT",
