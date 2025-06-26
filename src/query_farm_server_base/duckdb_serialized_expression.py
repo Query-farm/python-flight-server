@@ -65,9 +65,27 @@ def interpret_decimal(value: dict[str, Any]) -> Decimal:
     type_info = value["type"]["type_info"]
     scale = type_info["scale"]
     v = value["value"]
-    if not isinstance(v, int):
-        breakpoint()
-    return Decimal(v) / Decimal(10) ** scale
+
+    if isinstance(v, dict) and "upper" in v and "lower" in v:
+        # Combine upper and lower into a 128-bit signed integer
+        upper = v["upper"]
+        lower = v["lower"]
+
+        # Reconstruct full integer (assuming 64-bit halves)
+        combined = (upper << 64) | lower
+
+        # Convert from unsigned to signed (two's complement if necessary)
+        if upper & (1 << 63):
+            combined -= 1 << 128
+
+        decimal_value = Decimal(combined)
+    elif isinstance(v, int):
+        # Assume it's a simple int (64-bit)
+        decimal_value = Decimal(v)
+    else:
+        raise ValueError("Unsupported decimal value format")
+
+    return decimal_value / Decimal(10) ** scale
 
 
 def varint_get_byte_array(blob: bytes) -> tuple[list[int], bool]:
