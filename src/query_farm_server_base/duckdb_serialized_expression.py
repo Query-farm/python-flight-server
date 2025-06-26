@@ -33,6 +33,16 @@ def decode_bitstring(data: bytes) -> str:
     return bits
 
 
+def interpret_real(value: Any) -> str:
+    if value == "inf":
+        return "'infinity'"
+    elif value == "-inf":
+        return "'-infinity'"
+    elif value == "nan":
+        return "'nan'"
+    return value
+
+
 def decode_uuid(value: dict[str, int]) -> str:
     assert "upper" in value and "lower" in value, "Invalid GUID format"
 
@@ -296,11 +306,11 @@ def expression_to_string(
         elif expression["value"]["type"]["id"] == "DECIMAL":
             decimal_value = interpret_decimal(expression["value"])
             return str(decimal_value)
+        elif expression["value"]["type"]["id"] in ("FLOAT", "DOUBLE"):
+            return interpret_real(expression["value"]["value"])
         elif expression["value"]["type"]["id"] in (
             "BIGINT",
             "INTEGER",
-            "FLOAT",
-            "DOUBLE",
             "HUGEINT",
             "TINYINT",
             "SMALLINT",
