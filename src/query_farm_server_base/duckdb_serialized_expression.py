@@ -64,7 +64,7 @@ def decode_date(days: int) -> str:
 def interpret_decimal(value: dict[str, Any]) -> Decimal:
     type_info = value["type"]["type_info"]
     scale = type_info["scale"]
-    v = value["value"]
+    v = value["value"]["value"]
     return Decimal(v) / (10**scale)
 
 
