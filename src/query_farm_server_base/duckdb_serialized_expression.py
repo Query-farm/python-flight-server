@@ -340,7 +340,7 @@ def expression_to_string(
         elif expression["value"]["type"]["id"] == "TIMESTAMP WITH TIME ZONE":
             return f"to_timestamp({expression['value']['value']}::bigint)"
         elif expression["value"]["type"]["id"] == "TIME":
-            return f"TIME {interpret_time(expression['value']['value'])}"
+            return f"TIME '{interpret_time(expression['value']['value'])}'"
         elif expression["value"]["type"]["id"] == "TIMESTAMP_S":
             return f"make_timestamp({expression['value']['value']}::bigint*1000000)"
         elif expression["value"]["type"]["id"] == "TIMESTAMP_MS":
