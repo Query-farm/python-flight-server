@@ -402,7 +402,7 @@ def expression_to_string(
         return f"({f' {operator} '.join([e_to_s(child) for child in expression['children']])})"
     else:
         raise NotImplementedError(
-            f"Expression class {expression['expression_class']} is not supported"
+            f"Expression class {expression['expression_class']} is not supported expression: {expression}"
         )
 
 
