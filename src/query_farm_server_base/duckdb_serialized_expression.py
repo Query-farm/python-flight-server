@@ -65,6 +65,18 @@ def interpret_uhugeint(value: dict[str, Any]) -> str:
     return str((upper << 64) | lower)
 
 
+def interpret_hugeint(value: dict) -> str:
+    upper = value["upper"]
+    lower = value["lower"]
+    result = (upper << 64) | lower
+
+    # If the highest bit (bit 127) is set, interpret as negative
+    if upper & (1 << 63):
+        result -= 1 << 128
+
+    return str(result)
+
+
 def decode_uuid(value: dict[str, int]) -> str:
     assert "upper" in value and "lower" in value, "Invalid GUID format"
 
@@ -332,10 +344,11 @@ def expression_to_string(
             return interpret_real(expression["value"]["value"])
         elif expression["value"]["type"]["id"] == "UHUGEINT":
             return interpret_uhugeint(expression["value"]["value"])
+        elif expression["value"]["type"]["id"] == "HUGEINT":
+            return interpret_hugeint(expression["value"]["value"])
         elif expression["value"]["type"]["id"] in (
             "BIGINT",
             "INTEGER",
-            "HUGEINT",
             "TINYINT",
             "SMALLINT",
             "UBIGINT",
