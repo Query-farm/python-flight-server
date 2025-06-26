@@ -35,12 +35,11 @@ def decode_bitstring(data: bytes) -> str:
 
 
 def interpret_time(value: int) -> str:
-    t = timedelta(milliseconds=value)
+    t = timedelta(microseconds=value)
     hours, remainder = divmod(t.seconds, 3600)
     minutes, seconds = divmod(remainder, 60)
-    milliseconds = t.microseconds // 1000
 
-    result = time(hours, minutes, seconds, milliseconds * 1000)
+    result = time(hours, minutes, seconds, microsecond=t.microseconds)
     return result.strftime("%H:%M:%S.%f")
 
 
