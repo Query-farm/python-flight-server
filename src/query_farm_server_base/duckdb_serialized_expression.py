@@ -20,7 +20,7 @@ def decode_timestamptz_value(value: str) -> str:
 
 def _quote_string(value: str) -> str:
     assert isinstance(value, str)
-    return f"'{codecs.encode(value, 'unicode_escape')}'"
+    return f"'{codecs.encode(value, 'unicode_escape').decode('utf-8')}'"
 
 
 def decode_base64_value(value: dict[str, str]) -> bytes:
