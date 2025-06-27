@@ -45,7 +45,7 @@ def decode_bitstring(data: bytes) -> str:
 
 
 def interpret_time(value: int) -> str:
-    t = timedelta(milliseconds=value)
+    t = timedelta(microseconds=value)
     hours, remainder = divmod(t.seconds, 3600)
     minutes, seconds = divmod(remainder, 60)
 
