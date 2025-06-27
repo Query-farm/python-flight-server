@@ -9,7 +9,7 @@ from typing import Any
 
 def interpret_timestamp_with_time_zone(value: str) -> str:
     return (
-        "'"
+        "TIMESTAMPTZ '"
         + datetime.fromtimestamp(int(value) / 1_000_000, tz=timezone.utc).strftime(
             "%Y-%m-%d %H:%M:%S.%f"
         )
