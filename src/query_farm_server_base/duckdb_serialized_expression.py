@@ -2,10 +2,15 @@ import base64
 import codecs
 import math
 import uuid
-from datetime import date, timedelta, time
+from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal
 from typing import Any
-from datetime import datetime, timezone
+
+
+def interpret_timestamp_with_time_zone(value: str) -> str:
+    return datetime.fromtimestamp(int(value) / 1_000_000, tz=timezone.utc).strftime(
+        "%Y-%m-%d %H:%M:%S.%f"
+    )
 
 
 def _quote_string(value: str) -> str:
@@ -363,8 +368,7 @@ def expression_to_string(
         elif expression["value"]["type"]["id"] == "TIMESTAMP":
             return f"make_timestamp({expression['value']['value']}::bigint)"
         elif expression["value"]["type"]["id"] == "TIMESTAMP WITH TIME ZONE":
-            breakpoint()
-            return f"to_timestamp({expression['value']['value']}::bigint)"
+            return interpret_timestamp_with_time_zone(expression["value"]["value"])
         elif expression["value"]["type"]["id"] == "TIME":
             return f"TIME '{interpret_time(expression['value']['value'])}'"
         elif expression["value"]["type"]["id"] == "TIMESTAMP_S":
