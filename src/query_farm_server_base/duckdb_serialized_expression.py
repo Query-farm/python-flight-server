@@ -2,32 +2,41 @@ import base64
 import codecs
 import math
 import uuid
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
 from typing import Any
 
 
-def interpret_timestamp_with_time_zone(value: str) -> str:
+def decode_timestamptz_value(value: str) -> str:
+    """
+    Convert a DuckDB serialized timestamp with time zone into a SQL representation.
+    """
     return (
         "TIMESTAMPTZ '"
-        + datetime.fromtimestamp(int(value) / 1_000_000, tz=timezone.utc).strftime(
-            "%Y-%m-%d %H:%M:%S.%f"
-        )
+        + datetime.fromtimestamp(int(value) / 1_000_000, tz=UTC).strftime("%Y-%m-%d %H:%M:%S.%f")
         + "'"
     )
 
 
 def _quote_string(value: str) -> str:
     assert isinstance(value, str)
-    return f"'{value}'"
+    return f"'{codecs.encode(value, 'unicode_escape')}'"
 
 
-def decode_base64_value(value: Any) -> bytes:
+def decode_base64_value(value: dict[str, str]) -> bytes:
+    """
+    Decode a base64 encoded value into a series of bytes, the
+    Base64 value is produced by the Airport extension's JSON serialization.
+    """
     assert "base64" in value
     return base64.b64decode(value["base64"])
 
 
-def decode_bitstring(data: bytes) -> str:
+def decode_bitstring_value(data: bytes) -> str:
+    """
+    Decode a DuckDB serialized bitstring into a string of bits.
+    The first byte indicates the number of padding bits at the end of the bitstring.
+    """
     if not data or len(data) < 2:
         return ""
 
@@ -44,7 +53,10 @@ def decode_bitstring(data: bytes) -> str:
     return bits
 
 
-def interpret_time(value: int) -> str:
+def decode_time_value(value: int) -> str:
+    """
+    Convert a DuckDB serialized time value (microseconds since midnight) into a SQL time string.
+    """
     t = timedelta(microseconds=value)
     hours, remainder = divmod(t.seconds, 3600)
     minutes, seconds = divmod(remainder, 60)
@@ -53,7 +65,10 @@ def interpret_time(value: int) -> str:
     return result.strftime("%H:%M:%S.%f")
 
 
-def interpret_real(value: Any) -> str:
+def decode_real_value(value: Any) -> str:
+    """
+    Convert a DuckDB serialized real value (float or double) into a SQL string.
+    """
     if math.isinf(value):
         if value > 0:
             return "'infinity'"
@@ -63,18 +78,27 @@ def interpret_real(value: Any) -> str:
     return value
 
 
-def interpret_timestamp_ms(value: int) -> str:
-    dt = datetime.fromtimestamp(value / 1000, tz=timezone.utc)
+def decode_timestamp_ms_value(value: int) -> str:
+    """
+    Convert a DuckDB serialized timestamp in milliseconds since epoch into a SQL timestamp string.
+    """
+    dt = datetime.fromtimestamp(value / 1000, tz=UTC)
     return dt.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]  # Trim to milliseconds
 
 
-def interpret_uhugeint(value: dict[str, Any]) -> str:
+def decode_uhugeint_value(value: dict[str, Any]) -> str:
+    """
+    Decode a DuckDB serialized UHUUGEINT value into a string representation.
+    """
     upper = value["upper"]
     lower = value["lower"]
     return str((upper << 64) | lower)
 
 
-def interpret_hugeint(value: dict) -> str:
+def decode_hugeint_value(value: dict[str, Any]) -> str:
+    """
+    Decode a DuckDB serialized HUGEINT value into a string representation.
+    """
     upper = value["upper"]
     lower = value["lower"]
     result = (upper << 64) | lower
@@ -86,7 +110,10 @@ def interpret_hugeint(value: dict) -> str:
     return str(result)
 
 
-def decode_uuid(value: dict[str, int]) -> str:
+def decode_uuid_value(value: dict[str, int]) -> str:
+    """
+    Decode a DuckDB serialized UUID value into a string representation.
+    """
     assert "upper" in value and "lower" in value, "Invalid GUID format"
 
     # Handle the two's complement for the signed upper 64 bits
@@ -105,7 +132,10 @@ def decode_uuid(value: dict[str, int]) -> str:
     return str(u)
 
 
-def decode_date(days: int) -> str:
+def decode_date_value(days: int) -> str:
+    """
+    Convert a DuckDB serialized date value (days since epoch) into a SQL date string.
+    """
     if days == -2147483647:
         return "'-infinity'"
     elif days == 2147483647:
@@ -114,7 +144,10 @@ def decode_date(days: int) -> str:
     return f"'{formatted_date}'"
 
 
-def interpret_decimal(value: dict[str, Any]) -> Decimal:
+def decode_decimal_value(value: dict[str, Any]) -> Decimal:
+    """
+    Decode a DuckDB serialized decimal value into a Decimal object.
+    """
     type_info = value["type"]["type_info"]
     scale = type_info["scale"]
     v = value["value"]
@@ -141,7 +174,7 @@ def interpret_decimal(value: dict[str, Any]) -> Decimal:
     return decimal_value / Decimal(10) ** scale
 
 
-def varint_get_byte_array(blob: bytes) -> tuple[list[int], bool]:
+def _varint_get_byte_array(blob: bytes) -> tuple[list[int], bool]:
     if len(blob) < 4:
         raise ValueError("Invalid blob size.")
 
@@ -149,17 +182,16 @@ def varint_get_byte_array(blob: bytes) -> tuple[list[int], bool]:
     is_negative = (blob[0] & 0x80) == 0
 
     # Extract byte array starting from the 4th byte
-    if is_negative:
-        byte_array = [~b & 0xFF for b in blob[3:]]  # Apply bitwise NOT and mask to 8 bits
-    else:
-        byte_array = list(blob[3:])
-
+    byte_array = [~b & 255 for b in blob[3:]] if is_negative else list(blob[3:])
     return byte_array, is_negative
 
 
-def varint_to_varchar(blob: bytes) -> str:
+def decode_varint_value(blob: bytes) -> str:
+    """
+    Decode a DuckDB serialized VARINT value into a decimal string.
+    """
     decimal_string = ""
-    byte_array, is_negative = varint_get_byte_array(blob)
+    byte_array, is_negative = _varint_get_byte_array(blob)
     digits: list[int] = []
 
     # Constants matching your C++ code (update if needed)
@@ -320,9 +352,9 @@ def expression_to_string(
                     "Varint value must be a base64 encoded string or a string with unicode escape sequences"
                 )
 
-            return varint_to_varchar(varint_bytes)
+            return decode_varint_value(varint_bytes)
         elif expression["value"]["type"]["id"] == "UUID":
-            return decode_uuid(expression["value"]["value"])
+            return decode_uuid_value(expression["value"]["value"])
         elif expression["value"]["type"]["id"] in (
             "VARCHAR",
             "BLOB",
@@ -339,22 +371,22 @@ def expression_to_string(
                 raise Exception(
                     "Bit string value must be a base64 encoded string or a string with unicode escape sequences"
                 )
-            return decode_bitstring(bitstring_bytes)
+            return decode_bitstring_value(bitstring_bytes)
         elif expression["value"]["type"]["id"] == "BOOLEAN":
             return "True" if expression["value"]["value"] else "False"
         elif expression["value"]["type"]["id"] == "NULL":
             return "null"
         elif expression["value"]["type"]["id"] == "DATE":
-            return decode_date(expression["value"]["value"])
+            return decode_date_value(expression["value"]["value"])
         elif expression["value"]["type"]["id"] == "DECIMAL":
-            decimal_value = interpret_decimal(expression["value"])
+            decimal_value = decode_decimal_value(expression["value"])
             return str(decimal_value)
         elif expression["value"]["type"]["id"] in ("FLOAT", "DOUBLE"):
-            return interpret_real(expression["value"]["value"])
+            return decode_real_value(expression["value"]["value"])
         elif expression["value"]["type"]["id"] == "UHUGEINT":
-            return interpret_uhugeint(expression["value"]["value"])
+            return decode_uhugeint_value(expression["value"]["value"])
         elif expression["value"]["type"]["id"] == "HUGEINT":
-            return interpret_hugeint(expression["value"]["value"])
+            return decode_hugeint_value(expression["value"]["value"])
         elif expression["value"]["type"]["id"] in (
             "BIGINT",
             "INTEGER",
@@ -372,17 +404,15 @@ def expression_to_string(
         elif expression["value"]["type"]["id"] == "TIMESTAMP":
             return f"make_timestamp({expression['value']['value']}::bigint)"
         elif expression["value"]["type"]["id"] == "TIMESTAMP WITH TIME ZONE":
-            return interpret_timestamp_with_time_zone(expression["value"]["value"])
+            return decode_timestamptz_value(expression["value"]["value"])
         elif expression["value"]["type"]["id"] == "TIME":
-            return f"TIME '{interpret_time(expression['value']['value'])}'"
+            return f"TIME '{decode_time_value(expression['value']['value'])}'"
         elif expression["value"]["type"]["id"] == "TIMESTAMP_S":
             return f"make_timestamp({expression['value']['value']}::bigint*1000000)"
         elif expression["value"]["type"]["id"] == "TIMESTAMP_MS":
-            return f"'{interpret_timestamp_ms(expression['value']['value'])}'"
+            return f"'{decode_timestamp_ms_value(expression['value']['value'])}'"
         elif expression["value"]["type"]["id"] == "TIMESTAMP_NS":
             return f"make_timestamp_ns({expression['value']['value']}::bigint)"
-        #        elif expression["value"]["type"]["id"] == "TIMESTAMP WITH TIME ZONE":
-        #            return f"make_timestamp({expression['value']['value']}::bigint)"
         elif expression["value"]["type"]["id"] == "LIST":
             if expression["type"] == "VALUE_CONSTANT":
                 # So the children in this case aren't expressions, they are constants.
