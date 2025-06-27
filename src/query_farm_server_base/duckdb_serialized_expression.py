@@ -241,7 +241,7 @@ def decode_varint_value(blob: bytes) -> str:
     return decimal_string if decimal_string else "0"
 
 
-comparison_type_to_operator: dict[str, str] = {
+comparison_type_to_sql_operator: dict[str, str] = {
     "COMPARE_EQUAL": "=",
     "COMPARE_NOTEQUAL": "!=",
     "COMPARE_LESSTHAN": "<",
@@ -254,7 +254,7 @@ comparison_type_to_operator: dict[str, str] = {
 
 
 def comparison_type_to_string_(comparison_type: str) -> str:
-    result = comparison_type_to_operator.get(comparison_type)
+    result = comparison_type_to_sql_operator.get(comparison_type)
     if result is not None:
         return result
     raise NotImplementedError(f"Comparison type {comparison_type} is not supported")
