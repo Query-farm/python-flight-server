@@ -479,7 +479,7 @@ class SerializedValue_timestamp_ms(SerializedValueBase):
         assert self.value
 
         dt = datetime.fromtimestamp(self.value / 1000, tz=UTC)
-        return dt.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+        return "'" + dt.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3] + "'"
 
 
 class SerializedValueType_timestamp_ns(BaseModel):
@@ -519,7 +519,7 @@ class SerializedValue_timestamp_s(SerializedValueBase):
         assert self.value
 
         dt = datetime.fromtimestamp(self.value / 1000, tz=UTC)
-        return dt.strftime("%Y-%m-%d %H:%M:%S")
+        return "'" + dt.strftime("%Y-%m-%d %H:%M:%S") + "'"
 
 
 class SerializedValueType_tinyint(BaseModel):
