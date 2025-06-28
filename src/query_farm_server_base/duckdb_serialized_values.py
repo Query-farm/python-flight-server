@@ -404,7 +404,11 @@ class SerializedValue_time(SerializedValueBase):
         hours, remainder = divmod(t.seconds, 3600)
         minutes, seconds = divmod(remainder, 60)
 
-        return time(hours, minutes, seconds, microsecond=t.microseconds).strftime("%H:%M:%S.%f")
+        return (
+            "TIME '"
+            + time(hours, minutes, seconds, microsecond=t.microseconds).strftime("%H:%M:%S.%f")
+            + "'"
+        )
 
 
 class SerializedValueType_time_with_time_zone(BaseModel):
