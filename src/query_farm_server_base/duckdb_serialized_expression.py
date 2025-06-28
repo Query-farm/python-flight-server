@@ -4,241 +4,244 @@ import math
 import uuid
 from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
-from typing import Any
+from typing import Annotated, Any, Literal, Union
+
+from pydantic import BaseModel, Discriminator, Field, Tag, ValidationError
+from . import duckdb_serialized_values
 
 
-def decode_timestamptz_value(value: str) -> str:
-    """
-    Convert a DuckDB serialized timestamp with time zone into a SQL representation.
-    """
-    return (
-        "TIMESTAMPTZ '"
-        + datetime.fromtimestamp(int(value) / 1_000_000, tz=UTC).strftime("%Y-%m-%d %H:%M:%S.%f")
-        + "'"
-    )
+# def decode_timestamptz_value(value: str) -> str:
+#     """
+#     Convert a DuckDB serialized timestamp with time zone into a SQL representation.
+#     """
+#     return (
+#         "TIMESTAMPTZ '"
+#         + datetime.fromtimestamp(int(value) / 1_000_000, tz=UTC).strftime("%Y-%m-%d %H:%M:%S.%f")
+#         + "'"
+#     )
 
 
-def _quote_string(value: str) -> str:
-    assert isinstance(value, str)
+# def _quote_string(value: str) -> str:
+#     assert isinstance(value, str)
 
-    return f"'{value.replace("'", "''")}'"
-
-
-def decode_base64_value(value: dict[str, str]) -> bytes:
-    """
-    Decode a base64 encoded value into a series of bytes, the
-    Base64 value is produced by the Airport extension's JSON serialization.
-    """
-    assert "base64" in value
-    return base64.b64decode(value["base64"])
+#     return f"'{value.replace("'", "''")}'"
 
 
-def decode_bitstring_value(data: bytes) -> str:
-    """
-    Decode a DuckDB serialized bitstring into a string of bits.
-    The first byte indicates the number of padding bits at the end of the bitstring.
-    """
-    if not data or len(data) < 2:
-        return ""
-
-    padding_bits = data[0]
-    bit_data = data[1:]
-
-    # Convert all bytes to bits
-    bits = "".join(f"{byte:08b}" for byte in bit_data)
-
-    # Remove the padding bits from the end
-    if padding_bits:
-        bits = bits[padding_bits:]
-
-    return bits
+# def decode_base64_value(value: dict[str, str]) -> bytes:
+#     """
+#     Decode a base64 encoded value into a series of bytes, the
+#     Base64 value is produced by the Airport extension's JSON serialization.
+#     """
+#     assert "base64" in value
+#     return base64.b64decode(value["base64"])
 
 
-def decode_time_value(value: int) -> str:
-    """
-    Convert a DuckDB serialized time value (microseconds since midnight) into a SQL time string.
-    """
-    t = timedelta(microseconds=value)
-    hours, remainder = divmod(t.seconds, 3600)
-    minutes, seconds = divmod(remainder, 60)
+# def decode_bitstring_value(data: bytes) -> str:
+#     """
+#     Decode a DuckDB serialized bitstring into a string of bits.
+#     The first byte indicates the number of padding bits at the end of the bitstring.
+#     """
+#     if not data or len(data) < 2:
+#         return ""
 
-    result = time(hours, minutes, seconds, microsecond=t.microseconds)
-    return result.strftime("%H:%M:%S.%f")
+#     padding_bits = data[0]
+#     bit_data = data[1:]
 
+#     # Convert all bytes to bits
+#     bits = "".join(f"{byte:08b}" for byte in bit_data)
 
-def decode_real_value(value: Any) -> str:
-    """
-    Convert a DuckDB serialized real value (float or double) into a SQL string.
-    """
-    if math.isinf(value):
-        if value > 0:
-            return "'infinity'"
-        return "'-infinity'"
-    elif math.isnan(value):
-        return "'nan'"
-    return value
+#     # Remove the padding bits from the end
+#     if padding_bits:
+#         bits = bits[padding_bits:]
+
+#     return bits
 
 
-def decode_timestamp_ms_value(value: int) -> str:
-    """
-    Convert a DuckDB serialized timestamp in milliseconds since epoch into a SQL timestamp string.
-    """
-    dt = datetime.fromtimestamp(value / 1000, tz=UTC)
-    return dt.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]  # Trim to milliseconds
+# def decode_time_value(value: int) -> str:
+#     """
+#     Convert a DuckDB serialized time value (microseconds since midnight) into a SQL time string.
+#     """
+#     t = timedelta(microseconds=value)
+#     hours, remainder = divmod(t.seconds, 3600)
+#     minutes, seconds = divmod(remainder, 60)
+
+#     result = time(hours, minutes, seconds, microsecond=t.microseconds)
+#     return result.strftime("%H:%M:%S.%f")
 
 
-def decode_uhugeint_value(value: dict[str, Any]) -> str:
-    """
-    Decode a DuckDB serialized UHUUGEINT value into a string representation.
-    """
-    upper = value["upper"]
-    lower = value["lower"]
-    return str((upper << 64) | lower)
+# def decode_real_value(value: Any) -> str:
+#     """
+#     Convert a DuckDB serialized real value (float or double) into a SQL string.
+#     """
+#     if math.isinf(value):
+#         if value > 0:
+#             return "'infinity'"
+#         return "'-infinity'"
+#     elif math.isnan(value):
+#         return "'nan'"
+#     return value
 
 
-def decode_hugeint_value(value: dict[str, Any]) -> str:
-    """
-    Decode a DuckDB serialized HUGEINT value into a string representation.
-    """
-    upper = value["upper"]
-    lower = value["lower"]
-    result = (upper << 64) | lower
-
-    # If the highest bit (bit 127) is set, interpret as negative
-    if upper & (1 << 63):
-        result -= 1 << 128
-
-    return str(result)
+# def decode_timestamp_ms_value(value: int) -> str:
+#     """
+#     Convert a DuckDB serialized timestamp in milliseconds since epoch into a SQL timestamp string.
+#     """
+#     dt = datetime.fromtimestamp(value / 1000, tz=UTC)
+#     return dt.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]  # Trim to milliseconds
 
 
-def decode_uuid_value(value: dict[str, int]) -> str:
-    """
-    Decode a DuckDB serialized UUID value into a string representation.
-    """
-    assert "upper" in value and "lower" in value, "Invalid GUID format"
-
-    # Handle the two's complement for the signed upper 64 bits
-    upper = value["upper"] & ((1 << 64) - 1)  # Convert to unsigned if needed
-    lower = value["lower"]
-
-    # Combine into 128-bit integer
-    combined = (upper << 64) | lower
-
-    # Convert to 16 bytes (big-endian)
-    bytes_ = combined.to_bytes(16, byteorder="big")
-
-    # Create UUID from bytes
-    u = uuid.UUID(bytes=bytes_)
-
-    return str(u)
+# def decode_uhugeint_value(value: dict[str, Any]) -> str:
+#     """
+#     Decode a DuckDB serialized UHUUGEINT value into a string representation.
+#     """
+#     upper = value["upper"]
+#     lower = value["lower"]
+#     return str((upper << 64) | lower)
 
 
-def decode_date_value(days: int) -> str:
-    """
-    Convert a DuckDB serialized date value (days since epoch) into a SQL date string.
-    """
-    if days == -2147483647:
-        return "'-infinity'"
-    elif days == 2147483647:
-        return "'infinity'"
-    formatted_date = (date(1970, 1, 1) + timedelta(days=days)).isoformat()
-    return f"'{formatted_date}'"
+# def decode_hugeint_value(value: dict[str, Any]) -> str:
+#     """
+#     Decode a DuckDB serialized HUGEINT value into a string representation.
+#     """
+#     upper = value["upper"]
+#     lower = value["lower"]
+#     result = (upper << 64) | lower
+
+#     # If the highest bit (bit 127) is set, interpret as negative
+#     if upper & (1 << 63):
+#         result -= 1 << 128
+
+#     return str(result)
 
 
-def decode_decimal_value(value: dict[str, Any]) -> Decimal:
-    """
-    Decode a DuckDB serialized decimal value into a Decimal object.
-    """
-    type_info = value["type"]["type_info"]
-    scale = type_info["scale"]
-    v = value["value"]
+# def decode_uuid_value(value: dict[str, int]) -> str:
+#     """
+#     Decode a DuckDB serialized UUID value into a string representation.
+#     """
+#     assert "upper" in value and "lower" in value, "Invalid GUID format"
 
-    if isinstance(v, dict) and "upper" in v and "lower" in v:
-        # Combine upper and lower into a 128-bit signed integer
-        upper = v["upper"]
-        lower = v["lower"]
+#     # Handle the two's complement for the signed upper 64 bits
+#     upper = value["upper"] & ((1 << 64) - 1)  # Convert to unsigned if needed
+#     lower = value["lower"]
 
-        # Reconstruct full integer (assuming 64-bit halves)
-        combined = (upper << 64) | lower
+#     # Combine into 128-bit integer
+#     combined = (upper << 64) | lower
 
-        # Convert from unsigned to signed (two's complement if necessary)
-        if upper & (1 << 63):
-            combined -= 1 << 128
+#     # Convert to 16 bytes (big-endian)
+#     bytes_ = combined.to_bytes(16, byteorder="big")
 
-        decimal_value = Decimal(combined)
-    elif isinstance(v, int):
-        # Assume it's a simple int (64-bit)
-        decimal_value = Decimal(v)
-    else:
-        raise ValueError("Unsupported decimal value format")
+#     # Create UUID from bytes
+#     u = uuid.UUID(bytes=bytes_)
 
-    return decimal_value / Decimal(10) ** scale
+#     return str(u)
 
 
-def _varint_get_byte_array(blob: bytes) -> tuple[list[int], bool]:
-    if len(blob) < 4:
-        raise ValueError("Invalid blob size.")
+# def decode_date_value(days: int) -> str:
+#     """
+#     Convert a DuckDB serialized date value (days since epoch) into a SQL date string.
+#     """
+#     if days == -2147483647:
+#         return "'-infinity'"
+#     elif days == 2147483647:
+#         return "'infinity'"
+#     formatted_date = (date(1970, 1, 1) + timedelta(days=days)).isoformat()
+#     return f"'{formatted_date}'"
 
-    # Determine if the number is negative
-    is_negative = (blob[0] & 0x80) == 0
 
-    # Extract byte array starting from the 4th byte
-    byte_array = [~b & 255 for b in blob[3:]] if is_negative else list(blob[3:])
-    return byte_array, is_negative
+# def decode_decimal_value(value: dict[str, Any]) -> Decimal:
+#     """
+#     Decode a DuckDB serialized decimal value into a Decimal object.
+#     """
+#     type_info = value["type"]["type_info"]
+#     scale = type_info["scale"]
+#     v = value["value"]
+
+#     if isinstance(v, dict) and "upper" in v and "lower" in v:
+#         # Combine upper and lower into a 128-bit signed integer
+#         upper = v["upper"]
+#         lower = v["lower"]
+
+#         # Reconstruct full integer (assuming 64-bit halves)
+#         combined = (upper << 64) | lower
+
+#         # Convert from unsigned to signed (two's complement if necessary)
+#         if upper & (1 << 63):
+#             combined -= 1 << 128
+
+#         decimal_value = Decimal(combined)
+#     elif isinstance(v, int):
+#         # Assume it's a simple int (64-bit)
+#         decimal_value = Decimal(v)
+#     else:
+#         raise ValueError("Unsupported decimal value format")
+
+#     return decimal_value / Decimal(10) ** scale
 
 
-def decode_varint_value(blob: bytes) -> str:
-    """
-    Decode a DuckDB serialized VARINT value into a decimal string.
-    """
-    decimal_string = ""
-    byte_array, is_negative = _varint_get_byte_array(blob)
-    digits: list[int] = []
+# def _varint_get_byte_array(blob: bytes) -> tuple[list[int], bool]:
+#     if len(blob) < 4:
+#         raise ValueError("Invalid blob size.")
 
-    # Constants matching your C++ code (update if needed)
-    DIGIT_BYTES = 4  # Assuming 4 bytes per digit (like a uint32_t)
-    DIGIT_BITS = 32
-    DECIMAL_BASE = 1000000000  # Typically 10^9 for efficient base conversion
-    DECIMAL_SHIFT = 9  # Number of decimal digits in DECIMAL_BASE
+#     # Determine if the number is negative
+#     is_negative = (blob[0] & 0x80) == 0
 
-    # Pad the byte array so we can process in DIGIT_BYTES chunks without conditionals
-    padding_size = (-len(byte_array)) & (DIGIT_BYTES - 1)
-    byte_array = [0] * padding_size + byte_array
+#     # Extract byte array starting from the 4th byte
+#     byte_array = [~b & 255 for b in blob[3:]] if is_negative else list(blob[3:])
+#     return byte_array, is_negative
 
-    for i in range(0, len(byte_array), DIGIT_BYTES):
-        hi = 0
-        for j in range(DIGIT_BYTES):
-            hi |= byte_array[i + j] << (8 * (DIGIT_BYTES - j - 1))
 
-        for j in range(len(digits)):
-            tmp = (digits[j] << DIGIT_BITS) | hi
-            hi = tmp // DECIMAL_BASE
-            digits[j] = tmp - DECIMAL_BASE * hi
+# def decode_varint_value(blob: bytes) -> str:
+#     """
+#     Decode a DuckDB serialized VARINT value into a decimal string.
+#     """
+#     decimal_string = ""
+#     byte_array, is_negative = _varint_get_byte_array(blob)
+#     digits: list[int] = []
 
-        while hi:
-            digits.append(hi % DECIMAL_BASE)
-            hi //= DECIMAL_BASE
+#     # Constants matching your C++ code (update if needed)
+#     DIGIT_BYTES = 4  # Assuming 4 bytes per digit (like a uint32_t)
+#     DIGIT_BITS = 32
+#     DECIMAL_BASE = 1000000000  # Typically 10^9 for efficient base conversion
+#     DECIMAL_SHIFT = 9  # Number of decimal digits in DECIMAL_BASE
 
-    if not digits:
-        digits.append(0)
+#     # Pad the byte array so we can process in DIGIT_BYTES chunks without conditionals
+#     padding_size = (-len(byte_array)) & (DIGIT_BYTES - 1)
+#     byte_array = [0] * padding_size + byte_array
 
-    for i in range(len(digits) - 1):
-        remain = digits[i]
-        for _ in range(DECIMAL_SHIFT):
-            decimal_string += str(remain % 10)
-            remain //= 10
+#     for i in range(0, len(byte_array), DIGIT_BYTES):
+#         hi = 0
+#         for j in range(DIGIT_BYTES):
+#             hi |= byte_array[i + j] << (8 * (DIGIT_BYTES - j - 1))
 
-    remain = digits[-1]
-    while remain != 0:
-        decimal_string += str(remain % 10)
-        remain //= 10
+#         for j in range(len(digits)):
+#             tmp = (digits[j] << DIGIT_BITS) | hi
+#             hi = tmp // DECIMAL_BASE
+#             digits[j] = tmp - DECIMAL_BASE * hi
 
-    if is_negative:
-        decimal_string += "-"
+#         while hi:
+#             digits.append(hi % DECIMAL_BASE)
+#             hi //= DECIMAL_BASE
 
-    # Reverse the string to get the correct number
-    decimal_string = decimal_string[::-1]
-    return decimal_string if decimal_string else "0"
+#     if not digits:
+#         digits.append(0)
+
+#     for i in range(len(digits) - 1):
+#         remain = digits[i]
+#         for _ in range(DECIMAL_SHIFT):
+#             decimal_string += str(remain % 10)
+#             remain //= 10
+
+#     remain = digits[-1]
+#     while remain != 0:
+#         decimal_string += str(remain % 10)
+#         remain //= 10
+
+#     if is_negative:
+#         decimal_string += "-"
+
+#     # Reverse the string to get the correct number
+#     decimal_string = decimal_string[::-1]
+#     return decimal_string if decimal_string else "0"
 
 
 comparison_type_to_sql_operator: dict[str, str] = {
@@ -324,218 +327,274 @@ def expression_to_string(
     columns tracked.
     """
 
-    def e_to_s(expr: dict[str, Any]) -> str:
-        return expression_to_string(
-            expression=expr,
-            bound_column_names=bound_column_names,
-            bound_column_types=bound_column_types,
-        )
+    context = duckdb_serialized_values.Context.model_construct(
+        bound_column_names=bound_column_names,
+        bound_column_types=bound_column_types,
+    )
 
-    if expression["expression_class"] == "BOUND_COLUMN_REF":
-        column_name = bound_column_names[expression["binding"]["column_index"]]
-        bound_column_types[column_name] = expression["return_type"]
-        return f'"{column_name}"'
-    elif expression["expression_class"] == "BOUND_CAST":
-        return (
-            f"CAST({e_to_s(expression['child'])} AS {_type_to_sql_type(expression['return_type'])})"
-        )
-    elif expression["expression_class"] == "BOUND_CONSTANT":
-        if expression["value"]["is_null"]:
-            return "null"
-        elif expression["value"]["type"]["id"] == "VARINT":
-            varint_value = expression["value"]["value"]
-            if isinstance(varint_value, str):
-                varint_bytes = codecs.decode(varint_value, "unicode_escape").encode("utf-8")
-            elif "base64" in varint_value:
-                varint_bytes = decode_base64_value(varint_value)
-            else:
-                raise Exception(
-                    "Varint value must be a base64 encoded string or a string with unicode escape sequences"
-                )
+    # def e_to_s(expr: dict[str, Any]) -> str:
+    #     return expression_to_string(
+    #         expression=expr,
+    #         bound_column_names=bound_column_names,
+    #         bound_column_types=bound_column_types,
+    #     )
 
-            return decode_varint_value(varint_bytes)
-        elif expression["value"]["type"]["id"] == "UUID":
-            return decode_uuid_value(expression["value"]["value"])
-        elif expression["value"]["type"]["id"] in (
-            "VARCHAR",
-            "BLOB",
-        ):
-            return _quote_string(expression["value"]["value"])
-        elif expression["value"]["type"]["id"] == "BIT":
-            bit_value = expression["value"]["value"]
+    base = duckdb_serialized_values.SerializedExpression.model_validate({"contents": expression})
+    duckdb_serialized_values.inject_context(base, context)
+    return base.contents.sql()
 
-            if isinstance(bit_value, str):
-                bitstring_bytes = codecs.decode(bit_value, "unicode_escape").encode("utf-8")
-            elif "base64" in bit_value:
-                bitstring_bytes = decode_base64_value(bit_value)
-            else:
-                raise Exception(
-                    "Bit string value must be a base64 encoded string or a string with unicode escape sequences"
-                )
-            return decode_bitstring_value(bitstring_bytes)
-        elif expression["value"]["type"]["id"] == "BOOLEAN":
-            return "True" if expression["value"]["value"] else "False"
-        elif expression["value"]["type"]["id"] == "NULL":
-            return "null"
-        elif expression["value"]["type"]["id"] == "DATE":
-            return decode_date_value(expression["value"]["value"])
-        elif expression["value"]["type"]["id"] == "DECIMAL":
-            decimal_value = decode_decimal_value(expression["value"])
-            return str(decimal_value)
-        elif expression["value"]["type"]["id"] in ("FLOAT", "DOUBLE"):
-            return decode_real_value(expression["value"]["value"])
-        elif expression["value"]["type"]["id"] == "UHUGEINT":
-            return decode_uhugeint_value(expression["value"]["value"])
-        elif expression["value"]["type"]["id"] == "HUGEINT":
-            return decode_hugeint_value(expression["value"]["value"])
-        elif expression["value"]["type"]["id"] in (
-            "BIGINT",
-            "INTEGER",
-            "TINYINT",
-            "SMALLINT",
-            "UBIGINT",
-            "UINTEGER",
-            "USMALLINT",
-            "UTINYINT",
-        ):
-            return str(expression["value"]["value"])
-        elif expression["value"]["type"]["id"] == "INTERVAL":
-            iv = expression["value"]["value"]
-            return "INTERVAL '" + f"{iv['months']} months {iv['days']} days {iv['micros']} us" + "'"
-        elif expression["value"]["type"]["id"] == "TIMESTAMP":
-            return f"make_timestamp({expression['value']['value']}::bigint)"
-        elif expression["value"]["type"]["id"] == "TIMESTAMP WITH TIME ZONE":
-            return decode_timestamptz_value(expression["value"]["value"])
-        elif expression["value"]["type"]["id"] == "TIME":
-            return f"TIME '{decode_time_value(expression['value']['value'])}'"
-        elif expression["value"]["type"]["id"] == "TIMESTAMP_S":
-            return f"make_timestamp({expression['value']['value']}::bigint*1000000)"
-        elif expression["value"]["type"]["id"] == "TIMESTAMP_MS":
-            return f"'{decode_timestamp_ms_value(expression['value']['value'])}'"
-        elif expression["value"]["type"]["id"] == "TIMESTAMP_NS":
-            return f"make_timestamp_ns({expression['value']['value']}::bigint)"
-        elif expression["value"]["type"]["id"] == "LIST":
-            if expression["type"] == "VALUE_CONSTANT":
-                # So the children in this case aren't expressions, they are constants.
-                return (
-                    "["
-                    + ", ".join(
-                        [
-                            e_to_s(
-                                {
-                                    "type": "VALUE_CONSTANT",
-                                    "expression_class": "BOUND_CONSTANT",
-                                    "value": child,
-                                }
-                            )
-                            for child in expression["value"]["value"]["children"]
-                        ]
-                    )
-                    + "]"
-                )
-            else:
-                return (
-                    "["
-                    + ", ".join(
-                        [e_to_s(child) for child in expression["value"]["value"]["children"]]
-                    )
-                    + "]"
-                )
-        elif expression["value"]["type"]["id"] == "STRUCT":
-            if expression["type"] == "VALUE_CONSTANT":
-                names = [
-                    child["first"]
-                    for child in expression["value"]["type"]["type_info"]["child_types"]
-                ]
-                values = expression["value"]["value"]["children"]
-                return (
-                    "{"
-                    + ",".join(
-                        [
-                            f"'{name}':"
-                            + e_to_s(
-                                {
-                                    "type": "VALUE_CONSTANT",
-                                    "expression_class": "BOUND_CONSTANT",
-                                    "value": value,
-                                }
-                            )
-                            for name, value in zip(names, values, strict=True)
-                        ]
-                    )
-                    + "}"
-                )
-            else:
-                raise NotImplementedError("STRUCTs that aren't value constants are not supported")
-        else:
-            raise NotImplementedError(
-                f"Constant type {expression['value']['type']['id']} is not supported"
-            )
-    elif expression["expression_class"] == "BOUND_COMPARISON":
-        return f"{e_to_s(expression['left'])} {comparison_type_to_string_(expression['type'])} {e_to_s(expression['right'])}"
-    elif expression["expression_class"] == "BOUND_OPERATOR":
-        if expression["type"] in ("OPERATOR_IS_NULL", "OPERATOR_IS_NOT_NULL"):
-            operation = "IS NULL" if expression["type"] == "OPERATOR_IS_NULL" else "IS NOT NULL"
-            return e_to_s(expression["children"][0]) + " " + operation
-        elif expression["type"] in ("COMPARE_IN", "COMPARE_NOT_IN"):
-            first, *rest = expression["children"]
-            operation = "IN" if expression["type"] == "COMPARE_IN" else "NOT IN"
-            return f"{e_to_s(first)} {operation} ({', '.join([e_to_s(child) for child in rest])})"
-        elif expression["type"] == "OPERATOR_NOT":
-            assert len(expression["children"]) == 1
-            return f"NOT {e_to_s(expression['children'][0])}"
-        else:
-            raise NotImplementedError(f"Operator type {expression['type']} is not supported")
-    elif expression["expression_class"] == "BOUND_FUNCTION":
-        if expression["name"] == "struct_pack":
-            return (
-                expression["name"]
-                + "("
-                + ", ".join(
-                    [
-                        f"{child_type['first']} := {e_to_s(child)}"
-                        for child, child_type in zip(
-                            expression["children"],
-                            expression["function_data"]["variable_return_type"]["type_info"][
-                                "child_types"
-                            ],
-                            strict=True,
-                        )
-                    ]
-                )
-                + ")"
-            )
-        else:
-            return f"{expression['name']}({', '.join([e_to_s(child) for child in expression['children']])})"
-    elif expression["expression_class"] == "BOUND_CASE":
-        case_checks = [
-            f"WHEN {e_to_s(case_check['when_expr'])} THEN {e_to_s(case_check['then_expr'])}"
-            for case_check in expression["case_checks"]
-        ]
-        if expression["else_expr"] is not None:
-            case_checks.append(f"ELSE {e_to_s(expression['else_expr'])}")
+    # if expression["expression_class"] == "BOUND_COLUMN_REF":
+    #     column_ref = duckdb_serialized_values.ExpressionBoundColumnRef.model_validate(expression)
+    #     duckdb_serialized_values.inject_context(column_ref, context)
+    #     return column_ref.sql()
+    # elif expression["expression_class"] == "BOUND_CAST":
+    #     cast_expr = duckdb_serialized_values.ExpressionBoundCast.model_validate(expression)
+    #     duckdb_serialized_values.inject_context(cast_expr, context)
 
-        return "CASE " + " ".join(case_checks) + " END"
-    elif expression["expression_class"] == "BOUND_BETWEEN":
-        return f"{e_to_s(expression['input'])} BETWEEN {e_to_s(expression['lower'])} AND {e_to_s(expression['upper'])}"
-    elif expression["expression_class"] == "BOUND_CONJUNCTION":
-        if expression["type"] == "CONJUNCTION_AND":
-            operator = "AND"
-        elif expression["type"] == "CONJUNCTION_OR":
-            operator = "OR"
-        else:
-            raise NotImplementedError(f"Conjunction type {expression['type']} is not supported")
+    #     return cast_expr.sql()
+    #     # return (
+    #     #     f"CAST({e_to_s(expression['child'])} AS {_type_to_sql_type(expression['return_type'])})"
+    #     # )
+    # elif expression["expression_class"] == "BOUND_CONSTANT":
+    #     bound_constant = duckdb_serialized_values.ExpressionBoundConstant.model_validate(expression)
+    #     # {"value": {"type": {"id": "VARCHAR", "type_info": None}, "is_null": False, "value": "bar"}}
 
-        return f"({f' {operator} '.join([e_to_s(child) for child in expression['children']])})"
-    else:
-        raise NotImplementedError(
-            f"Expression class {expression['expression_class']} is not supported expression: {expression}"
-        )
+    #     return bound_constant.value.sql()
+
+    #     # if expression["value"]["is_null"]:
+    #     #     return "null"
+    #     # elif expression["value"]["type"]["id"] == "VARINT":
+    #     #     varint_value = expression["value"]["value"]
+    #     #     if isinstance(varint_value, str):
+    #     #         varint_bytes = codecs.decode(varint_value, "unicode_escape").encode("utf-8")
+    #     #     elif "base64" in varint_value:
+    #     #         varint_bytes = decode_base64_value(varint_value)
+    #     #     else:
+    #     #         raise Exception(
+    #     #             "Varint value must be a base64 encoded string or a string with unicode escape sequences"
+    #     #         )
+
+    #     #     return decode_varint_value(varint_bytes)
+    #     # elif expression["value"]["type"]["id"] == "UUID":
+    #     #     return decode_uuid_value(expression["value"]["value"])
+    #     # elif expression["value"]["type"]["id"] in (
+    #     #     "VARCHAR",
+    #     #     "BLOB",
+    #     # ):
+    #     #     return _quote_string(expression["value"]["value"])
+    #     # elif expression["value"]["type"]["id"] == "BIT":
+    #     #     bit_value = expression["value"]["value"]
+
+    #     #     if isinstance(bit_value, str):
+    #     #         bitstring_bytes = codecs.decode(bit_value, "unicode_escape").encode("utf-8")
+    #     #     elif "base64" in bit_value:
+    #     #         bitstring_bytes = decode_base64_value(bit_value)
+    #     #     else:
+    #     #         raise Exception(
+    #     #             "Bit string value must be a base64 encoded string or a string with unicode escape sequences"
+    #     #         )
+    #     #     return decode_bitstring_value(bitstring_bytes)
+    #     # elif expression["value"]["type"]["id"] == "BOOLEAN":
+    #     #     return "True" if expression["value"]["value"] else "False"
+    #     # elif expression["value"]["type"]["id"] == "NULL":
+    #     #     return "null"
+    #     # elif expression["value"]["type"]["id"] == "DATE":
+    #     #     return decode_date_value(expression["value"]["value"])
+    #     # elif expression["value"]["type"]["id"] == "DECIMAL":
+    #     #     decimal_value = decode_decimal_value(expression["value"])
+    #     #     return str(decimal_value)
+    #     # elif expression["value"]["type"]["id"] in ("FLOAT", "DOUBLE"):
+    #     #     return decode_real_value(expression["value"]["value"])
+    #     # elif expression["value"]["type"]["id"] == "UHUGEINT":
+    #     #     return decode_uhugeint_value(expression["value"]["value"])
+    #     # elif expression["value"]["type"]["id"] == "HUGEINT":
+    #     #     return decode_hugeint_value(expression["value"]["value"])
+    #     # elif expression["value"]["type"]["id"] in (
+    #     #     "BIGINT",
+    #     #     "INTEGER",
+    #     #     "TINYINT",
+    #     #     "SMALLINT",
+    #     #     "UBIGINT",
+    #     #     "UINTEGER",
+    #     #     "USMALLINT",
+    #     #     "UTINYINT",
+    #     # ):
+    #     #     return str(expression["value"]["value"])
+    #     # elif expression["value"]["type"]["id"] == "INTERVAL":
+    #     #     iv = expression["value"]["value"]
+    #     #     return "INTERVAL '" + f"{iv['months']} months {iv['days']} days {iv['micros']} us" + "'"
+    #     # elif expression["value"]["type"]["id"] == "TIMESTAMP":
+    #     #     return f"make_timestamp({expression['value']['value']}::bigint)"
+    #     # elif expression["value"]["type"]["id"] == "TIMESTAMP WITH TIME ZONE":
+    #     #     return decode_timestamptz_value(expression["value"]["value"])
+    #     # elif expression["value"]["type"]["id"] == "TIME":
+    #     #     return f"TIME '{decode_time_value(expression['value']['value'])}'"
+    #     # elif expression["value"]["type"]["id"] == "TIMESTAMP_S":
+    #     #     return f"make_timestamp({expression['value']['value']}::bigint*1000000)"
+    #     # elif expression["value"]["type"]["id"] == "TIMESTAMP_MS":
+    #     #     return f"'{decode_timestamp_ms_value(expression['value']['value'])}'"
+    #     # elif expression["value"]["type"]["id"] == "TIMESTAMP_NS":
+    #     #     return f"make_timestamp_ns({expression['value']['value']}::bigint)"
+    #     # elif expression["value"]["type"]["id"] == "LIST":
+    #     #     if expression["type"] == "VALUE_CONSTANT":
+    #     #         # So the children in this case aren't expressions, they are constants.
+    #     #         return (
+    #     #             "["
+    #     #             + ", ".join(
+    #     #                 [
+    #     #                     e_to_s(
+    #     #                         {
+    #     #                             "type": "VALUE_CONSTANT",
+    #     #                             "expression_class": "BOUND_CONSTANT",
+    #     #                             "value": child,
+    #     #                         }
+    #     #                     )
+    #     #                     for child in expression["value"]["value"]["children"]
+    #     #                 ]
+    #     #             )
+    #     #             + "]"
+    #     #         )
+    #     #     else:
+    #     #         return (
+    #     #             "["
+    #     #             + ", ".join(
+    #     #                 [e_to_s(child) for child in expression["value"]["value"]["children"]]
+    #     #             )
+    #     #             + "]"
+    #     #         )
+    #     # elif expression["value"]["type"]["id"] == "STRUCT":
+    #     #     if expression["type"] == "VALUE_CONSTANT":
+    #     #         names = [
+    #     #             child["first"]
+    #     #             for child in expression["value"]["type"]["type_info"]["child_types"]
+    #     #         ]
+    #     #         values = expression["value"]["value"]["children"]
+    #     #         return (
+    #     #             "{"
+    #     #             + ",".join(
+    #     #                 [
+    #     #                     f"'{name}':"
+    #     #                     + e_to_s(
+    #     #                         {
+    #     #                             "type": "VALUE_CONSTANT",
+    #     #                             "expression_class": "BOUND_CONSTANT",
+    #     #                             "value": value,
+    #     #                         }
+    #     #                     )
+    #     #                     for name, value in zip(names, values, strict=True)
+    #     #                 ]
+    #     #             )
+    #     #             + "}"
+    #     #         )
+    #     #     else:
+    #     #         raise NotImplementedError("STRUCTs that aren't value constants are not supported")
+    #     # else:
+    #     #     raise NotImplementedError(
+    #     #         f"Constant type {expression['value']['type']['id']} is not supported"
+    #     #     )
+    # elif expression["expression_class"] == "BOUND_COMPARISON":
+    #     comparison_expr = duckdb_serialized_values.ExpressionBoundComparison.model_validate(
+    #         expression
+    #     )
+    #     duckdb_serialized_values.inject_context(comparison_expr, context)
+    #     return comparison_expr.sql()
+
+    #     # return f"{e_to_s(expression['left'])} {comparison_type_to_string_(expression['type'])} {e_to_s(expression['right'])}"
+    # elif expression["expression_class"] == "BOUND_OPERATOR":
+    #     operator_expr = duckdb_serialized_values.ExpressionBoundOperator.model_validate(expression)
+    #     duckdb_serialized_values.inject_context(operator_expr, context)
+    #     return operator_expr.sql()
+
+    #     # if expression["type"] in ("OPERATOR_IS_NULL", "OPERATOR_IS_NOT_NULL"):
+    #     #     operation = "IS NULL" if expression["type"] == "OPERATOR_IS_NULL" else "IS NOT NULL"
+    #     #     return e_to_s(expression["children"][0]) + " " + operation
+    #     # elif expression["type"] in ("COMPARE_IN", "COMPARE_NOT_IN"):
+    #     #     first, *rest = expression["children"]
+    #     #     operation = "IN" if expression["type"] == "COMPARE_IN" else "NOT IN"
+    #     #     return f"{e_to_s(first)} {operation} ({', '.join([e_to_s(child) for child in rest])})"
+    #     # elif expression["type"] == "OPERATOR_NOT":
+    #     #     assert len(expression["children"]) == 1
+    #     #     return f"NOT {e_to_s(expression['children'][0])}"
+    #     # else:
+    #     #     raise NotImplementedError(f"Operator type {expression['type']} is not supported")
+    # elif expression["expression_class"] == "BOUND_FUNCTION":
+    #     try:
+    #         function_expr = duckdb_serialized_values.ExpressionBoundFunction.model_validate(
+    #             expression
+    #         )
+    #     except Exception as e:
+    #         print(e)
+    #         breakpoint()
+    #         raise ValidationError(
+    #             f"Failed to validate expression {expression} with error: {e}"
+    #         ) from e
+
+    #     duckdb_serialized_values.inject_context(function_expr, context)
+    #     return function_expr.sql()
+
+    #     # if expression["name"] == "struct_pack":
+    #     #     return (
+    #     #         expression["name"]
+    #     #         + "("
+    #     #         + ", ".join(
+    #     #             [
+    #     #                 f"{child_type['first']} := {e_to_s(child)}"
+    #     #                 for child, child_type in zip(
+    #     #                     expression["children"],
+    #     #                     expression["function_data"]["variable_return_type"]["type_info"][
+    #     #                         "child_types"
+    #     #                     ],
+    #     #                     strict=True,
+    #     #                 )
+    #     #             ]
+    #     #         )
+    #     #         + ")"
+    #     #     )
+    #     # else:
+    #     #     return f"{expression['name']}({', '.join([e_to_s(child) for child in expression['children']])})"
+    # elif expression["expression_class"] == "BOUND_CASE":
+    #     case_expr = duckdb_serialized_values.ExpressionBoundCase.model_validate(expression)
+    #     duckdb_serialized_values.inject_context(case_expr, context)
+    #     return case_expr.sql()
+
+    #     # case_checks = [
+    #     #     f"WHEN {e_to_s(case_check['when_expr'])} THEN {e_to_s(case_check['then_expr'])}"
+    #     #     for case_check in expression["case_checks"]
+    #     # ]
+    #     # if expression["else_expr"] is not None:
+    #     #     case_checks.append(f"ELSE {e_to_s(expression['else_expr'])}")
+
+    #     # return "CASE " + " ".join(case_checks) + " END"
+    # elif expression["expression_class"] == "BOUND_BETWEEN":
+    #     between_expr = duckdb_serialized_values.ExpressionBoundBetween.model_validate(expression)
+    #     duckdb_serialized_values.inject_context(between_expr, context)
+    #     return between_expr.sql()
+
+    #     # assert "input" in expression and "lower" in expression and "upper" in expression
+    # #        return f"{e_to_s(expression['input'])} BETWEEN {e_to_s(expression['lower'])} AND {e_to_s(expression['upper'])}"
+    # elif expression["expression_class"] == "BOUND_CONJUNCTION":
+    #     conjunction_expr = duckdb_serialized_values.ExpressionBoundConjunction.model_validate(
+    #         expression
+    #     )
+    #     duckdb_serialized_values.inject_context(conjunction_expr, context)
+    #     return conjunction_expr.sql()
+    #     # if expression["type"] == "CONJUNCTION_AND":
+    #     #     operator = "AND"
+    #     # elif expression["type"] == "CONJUNCTION_OR":
+    #     #     operator = "OR"
+    #     # else:
+    #     #     raise NotImplementedError(f"Conjunction type {expression['type']} is not supported")
+
+    #     # return f"({f' {operator} '.join([e_to_s(child) for child in expression['children']])})"
+    # else:
+    #     raise NotImplementedError(
+    #         f"Expression class {expression['expression_class']} is not supported expression: {expression}"
+    #     )
 
 
 def convert_to_sql(
     source: list[dict[str, Any]], bound_column_names: list[str]
-) -> tuple[str, dict[str, Any]]:
+) -> tuple[str, dict[str, str]]:
     bound_column_types: dict[str, Any] = {}
     sql = " AND ".join(
         [

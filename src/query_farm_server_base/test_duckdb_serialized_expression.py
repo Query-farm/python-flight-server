@@ -6,99 +6,14 @@ import pytest
 from . import duckdb_serialized_expression
 
 owner_type_info = {
-    "Owner": {
-        "id": "STRUCT",
-        "type_info": {
-            "alias": "",
-            "child_types": [
-                {
-                    "first": "DisplayName",
-                    "second": {
-                        "id": "VARCHAR",
-                        "type_info": None,
-                    },
-                },
-                {
-                    "first": "ID",
-                    "second": {
-                        "id": "VARCHAR",
-                        "type_info": None,
-                    },
-                },
-            ],
-            "modifiers": [],
-            "type": "STRUCT_TYPE_INFO",
-        },
-    },
-    "aws_region": {
-        "id": "VARCHAR",
-        "type_info": None,
-    },
+    "Owner": 'STRUCT("DisplayName" VARCHAR,"ID" VARCHAR)',
+    "aws_region": "VARCHAR",
 }
 
 bucket_type_info = {
-    "Buckets": {
-        "id": "LIST",
-        "type_info": {
-            "alias": "",
-            "child_type": {
-                "id": "STRUCT",
-                "type_info": {
-                    "alias": "",
-                    "child_types": [
-                        {
-                            "first": "Name",
-                            "second": {
-                                "id": "VARCHAR",
-                                "type_info": None,
-                            },
-                        },
-                        {
-                            "first": "CreationDate",
-                            "second": {
-                                "id": "TIMESTAMP_S",
-                                "type_info": None,
-                            },
-                        },
-                    ],
-                    "modifiers": [],
-                    "type": "STRUCT_TYPE_INFO",
-                },
-            },
-            "modifiers": [],
-            "type": "LIST_TYPE_INFO",
-        },
-    },
-    "aws_region": {
-        "id": "VARCHAR",
-        "type_info": None,
-    },
+    "Buckets": 'STRUCT("Name" VARCHAR,"CreationDate" TIMESTAMP_S)[]',
+    "aws_region": "VARCHAR",
 }
-
-
-# Write a conversion from the Type information into a SQL type.
-@pytest.mark.parametrize(
-    "type_info,sql_types",
-    [
-        (
-            bucket_type_info,
-            {
-                "Buckets": 'STRUCT("Name" VARCHAR,"CreationDate" TIMESTAMP_S)[]',
-                "aws_region": "VARCHAR",
-            },
-        ),
-        (
-            owner_type_info,
-            {
-                "Owner": 'STRUCT("DisplayName" VARCHAR,"ID" VARCHAR)',
-                "aws_region": "VARCHAR",
-            },
-        ),
-    ],
-)
-def test_duckdb_type_to_sql(type_info: dict[str, Any], sql_types: dict[str, Any]) -> None:
-    result = duckdb_serialized_expression.convert_type_to_sql(type_info)
-    assert result == sql_types
 
 
 @pytest.mark.parametrize(
@@ -107,12 +22,12 @@ def test_duckdb_type_to_sql(type_info: dict[str, Any], sql_types: dict[str, Any]
         (
             '{"filters":[{"expression_class":"BOUND_FUNCTION","type":"BOUND_FUNCTION","alias":"","query_location":18446744073709551615,"return_type":{"id":"BOOLEAN","type_info":null},"children":[{"expression_class":"BOUND_COLUMN_REF","type":"BOUND_COLUMN_REF","alias":"aws_region","query_location":70,"return_type":{"id":"VARCHAR","type_info":null},"binding":{"table_index":0,"column_index":0},"depth":0},{"expression_class":"BOUND_CONSTANT","type":"VALUE_CONSTANT","alias":"","query_location":18446744073709551615,"value":{"type":{"id":"VARCHAR","type_info":null},"is_null":false,"value":"bar"}}],"name":"prefix","arguments":[{"id":"VARCHAR","type_info":null},{"id":"VARCHAR","type_info":null}],"original_arguments":[],"has_serialize":false,"is_operator":false},{"expression_class":"BOUND_COMPARISON","type":"COMPARE_EQUAL","alias":"","query_location":18446744073709551615,"left":{"expression_class":"BOUND_COLUMN_REF","type":"BOUND_COLUMN_REF","alias":"aws_region","query_location":18446744073709551615,"return_type":{"id":"VARCHAR","type_info":null},"binding":{"table_index":0,"column_index":0},"depth":0},"right":{"expression_class":"BOUND_CONSTANT","type":"VALUE_CONSTANT","alias":"","query_location":18446744073709551615,"value":{"type":{"id":"VARCHAR","type_info":null},"is_null":false,"value":"us-east-1"}}}],"column_binding_names_by_index":["aws_region","Buckets","Owner","aws_profile_name"]}',
             "prefix(\"aws_region\", 'bar') AND \"aws_region\" = 'us-east-1'",
-            {"aws_region": {"id": "VARCHAR", "type_info": None}},
+            {"aws_region": "VARCHAR"},
         ),
         (
             '{"filters":[{"expression_class":"BOUND_OPERATOR","type":"COMPARE_IN","alias":"","query_location":81,"return_type":{"id":"BOOLEAN","type_info":null},"children":[{"expression_class":"BOUND_COLUMN_REF","type":"BOUND_COLUMN_REF","alias":"aws_region","query_location":70,"return_type":{"id":"VARCHAR","type_info":null},"binding":{"table_index":0,"column_index":0},"depth":0},{"expression_class":"BOUND_CONSTANT","type":"VALUE_CONSTANT","alias":"","query_location":18446744073709551615,"value":{"type":{"id":"VARCHAR","type_info":null},"is_null":false,"value":"us-east-1"}},{"expression_class":"BOUND_CONSTANT","type":"VALUE_CONSTANT","alias":"","query_location":18446744073709551615,"value":{"type":{"id":"VARCHAR","type_info":null},"is_null":false,"value":"us-east-2"}}]},{"expression_class":"BOUND_COMPARISON","type":"COMPARE_EQUAL","alias":"","query_location":18446744073709551615,"left":{"expression_class":"BOUND_COLUMN_REF","type":"BOUND_COLUMN_REF","alias":"aws_region","query_location":18446744073709551615,"return_type":{"id":"VARCHAR","type_info":null},"binding":{"table_index":0,"column_index":0},"depth":0},"right":{"expression_class":"BOUND_CONSTANT","type":"VALUE_CONSTANT","alias":"","query_location":18446744073709551615,"value":{"type":{"id":"VARCHAR","type_info":null},"is_null":false,"value":"us-east-1"}}}],"column_binding_names_by_index":["aws_region","Buckets","Owner","aws_profile_name"]}',
             "\"aws_region\" IN ('us-east-1', 'us-east-2') AND \"aws_region\" = 'us-east-1'",
-            {"aws_region": {"id": "VARCHAR", "type_info": None}},
+            {"aws_region": "VARCHAR"},
         ),
         (
             '{"filters":[{"expression_class":"BOUND_COMPARISON","type":"COMPARE_EQUAL","alias":"","query_location":18446744073709551615,"left":{"expression_class":"BOUND_FUNCTION","type":"BOUND_FUNCTION","alias":"","query_location":18446744073709551615,"return_type":{"id":"VARCHAR","type_info":null},"children":[{"expression_class":"BOUND_FUNCTION","type":"BOUND_FUNCTION","alias":"","query_location":18446744073709551615,"return_type":{"id":"STRUCT","type_info":{"type":"STRUCT_TYPE_INFO","alias":"","modifiers":[],"child_types":[{"first":"Name","second":{"id":"VARCHAR","type_info":null}},{"first":"CreationDate","second":{"id":"TIMESTAMP_S","type_info":null}}]}},"children":[{"expression_class":"BOUND_COLUMN_REF","type":"BOUND_COLUMN_REF","alias":"Buckets","query_location":18446744073709551615,"return_type":{"id":"LIST","type_info":{"type":"LIST_TYPE_INFO","alias":"","modifiers":[],"child_type":{"id":"STRUCT","type_info":{"type":"STRUCT_TYPE_INFO","alias":"","modifiers":[],"child_types":[{"first":"Name","second":{"id":"VARCHAR","type_info":null}},{"first":"CreationDate","second":{"id":"TIMESTAMP_S","type_info":null}}]}}}},"binding":{"table_index":0,"column_index":1},"depth":0},{"expression_class":"BOUND_CONSTANT","type":"VALUE_CONSTANT","alias":"","query_location":18446744073709551615,"value":{"type":{"id":"BIGINT","type_info":null},"is_null":false,"value":1}}],"name":"array_extract","arguments":[{"id":"LIST","type_info":{"type":"LIST_TYPE_INFO","alias":"","modifiers":[],"child_type":{"id":"STRUCT","type_info":{"type":"STRUCT_TYPE_INFO","alias":"","modifiers":[],"child_types":[{"first":"Name","second":{"id":"VARCHAR","type_info":null}},{"first":"CreationDate","second":{"id":"TIMESTAMP_S","type_info":null}}]}}}},{"id":"BIGINT","type_info":null}],"original_arguments":[],"has_serialize":false,"is_operator":false},{"expression_class":"BOUND_CONSTANT","type":"VALUE_CONSTANT","alias":"","query_location":18446744073709551615,"value":{"type":{"id":"VARCHAR","type_info":null},"is_null":false,"value":"Name"}}],"name":"struct_extract","arguments":[{"id":"STRUCT","type_info":{"type":"STRUCT_TYPE_INFO","alias":"","modifiers":[],"child_types":[{"first":"Name","second":{"id":"VARCHAR","type_info":null}},{"first":"CreationDate","second":{"id":"TIMESTAMP_S","type_info":null}}]}},{"id":"VARCHAR","type_info":null}],"original_arguments":[],"has_serialize":false,"is_operator":false},"right":{"expression_class":"BOUND_CONSTANT","type":"VALUE_CONSTANT","alias":"","query_location":18446744073709551615,"value":{"type":{"id":"VARCHAR","type_info":null},"is_null":false,"value":"foobar"}}},{"expression_class":"BOUND_COMPARISON","type":"COMPARE_EQUAL","alias":"","query_location":18446744073709551615,"left":{"expression_class":"BOUND_COLUMN_REF","type":"BOUND_COLUMN_REF","alias":"aws_region","query_location":18446744073709551615,"return_type":{"id":"VARCHAR","type_info":null},"binding":{"table_index":0,"column_index":0},"depth":0},"right":{"expression_class":"BOUND_CONSTANT","type":"VALUE_CONSTANT","alias":"","query_location":18446744073709551615,"value":{"type":{"id":"VARCHAR","type_info":null},"is_null":false,"value":"us-east-1"}}}],"column_binding_names_by_index":["aws_region","Buckets","Owner","aws_profile_name"]}',
