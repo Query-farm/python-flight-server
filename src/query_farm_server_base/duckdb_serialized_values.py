@@ -110,7 +110,7 @@ class SerializedValue_bit(SerializedValueBase):
         if padding_bits:
             bits = bits[padding_bits:]
 
-        return bits
+        return f"'{bits}'"
 
 
 class SerializedValueType_blob(BaseModel):
@@ -128,8 +128,9 @@ class SerializedValue_blob(SerializedValueBase):
     def sql(self) -> str:
         if self.is_null:
             return "null"
+        assert self.value
 
-        return str(self.value)
+        return f"'{self.value.replace("'", "''")}'"
 
 
 class SerializedValueType_boolean(BaseModel):
