@@ -4,6 +4,7 @@ from typing import Any
 import pytest
 
 from . import duckdb_serialized_expression
+from . import duckdb_serialized_values
 
 owner_type_info = {
     "Owner": 'STRUCT("DisplayName" VARCHAR,"ID" VARCHAR)',
@@ -14,6 +15,85 @@ bucket_type_info = {
     "Buckets": 'STRUCT("Name" VARCHAR,"CreationDate" TIMESTAMP_S)[]',
     "aws_region": "VARCHAR",
 }
+
+
+@pytest.mark.parametrize(
+    "parser_cls,input",
+    [
+        (
+            duckdb_serialized_values.SerializedValueType_list,
+            {
+                "id": "LIST",
+                "type_info": {
+                    "type": "LIST_TYPE_INFO",
+                    "alias": "",
+                    "extension_info": None,
+                    "child_type": {"id": "INTEGER", "type_info": None},
+                },
+            },
+        ),
+        (
+            duckdb_serialized_values.ExpressionBoundFunction,
+            {
+                "expression_class": "BOUND_FUNCTION",
+                "type": "BOUND_FUNCTION",
+                "alias": "",
+                "query_location": 18446744073709552000,
+                "return_type": {"id": "INTEGER", "type_info": None},
+                "children": [
+                    {
+                        "expression_class": "BOUND_COLUMN_REF",
+                        "type": "BOUND_COLUMN_REF",
+                        "alias": "switches",
+                        "query_location": 18446744073709552000,
+                        "return_type": {
+                            "id": "LIST",
+                            "type_info": {
+                                "type": "LIST_TYPE_INFO",
+                                "alias": "",
+                                "extension_info": None,
+                                "child_type": {"id": "INTEGER", "type_info": None},
+                            },
+                        },
+                        "binding": {"table_index": 0, "column_index": 0},
+                        "depth": 0,
+                    },
+                    {
+                        "expression_class": "BOUND_CONSTANT",
+                        "type": "VALUE_CONSTANT",
+                        "alias": "",
+                        "query_location": 18446744073709552000,
+                        "value": {
+                            "type": {"id": "BIGINT", "type_info": None},
+                            "is_null": False,
+                            "value": 0,
+                        },
+                    },
+                ],
+                "name": "array_extract",
+                "arguments": [
+                    {
+                        "id": "LIST",
+                        "type_info": {
+                            "type": "LIST_TYPE_INFO",
+                            "alias": "",
+                            "extension_info": None,
+                            "child_type": {"id": "INTEGER", "type_info": None},
+                        },
+                    },
+                    {"id": "BIGINT", "type_info": None},
+                ],
+                "original_arguments": [],
+                "catalog_name": "system",
+                "schema_name": "main",
+                "has_serialize": False,
+                "is_operator": False,
+            },
+        ),
+    ],
+)
+def test_parse(parser_cls: Any, input: dict[str, Any]) -> None:
+    parser_cls.model_validate(input)
 
 
 @pytest.mark.parametrize(

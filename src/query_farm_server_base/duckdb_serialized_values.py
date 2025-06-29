@@ -33,7 +33,7 @@ class SerializedValueValue_base64(BaseModel):
 class SerializedValueTypeInfo_list(BaseModel):
     alias: str
     child_type: "AllValidTypeIdAndInfo"
-    modifiers: list[Any]
+    #    modifiers: list[Any] | None = None
     type: Literal["LIST_TYPE_INFO"] = "LIST_TYPE_INFO"
 
 
@@ -1088,6 +1088,7 @@ class ExpressionBoundFunctionFunctionData(BaseModel):
 
 class ExpressionBoundFunction(ExpressionBase):
     expression_class: Literal["BOUND_FUNCTION"] = "BOUND_FUNCTION"
+    type: Literal["BOUND_FUNCTION"] = "BOUND_FUNCTION"
     name: str
     return_type: AllValidTypeIdAndInfo
     children: list[AnyExpression]
