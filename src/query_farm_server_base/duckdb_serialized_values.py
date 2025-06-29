@@ -1119,6 +1119,8 @@ class ExpressionBoundFunction(ExpressionBase):
                 )
                 + ")"
             )
+        elif self.is_operator:
+            return self.name.join([child.sql() for child in self.children])
         else:
             return f"{self.name}({', '.join([child.sql() for child in self.children])})"
 
