@@ -141,6 +141,14 @@ class SerializedValueType_boolean(BaseModel):
         return self.id
 
 
+class SerializedValueType_any(BaseModel):
+    id: Literal["ANY"] = "ANY"
+    type_info: None
+
+    def sql(self) -> str:
+        raise NotImplementedError("SerializedValueType_any.sql() is not implemented.")
+
+
 class SerializedValue_boolean(SerializedValueBase):
     type: SerializedValueType_boolean
     value: bool | None = None
@@ -808,6 +816,7 @@ def get_discriminator_value(v: Any) -> str:
 
 
 AllValidTypeIdAndInfo = Union[
+    SerializedValueType_any,
     SerializedValueType_boolean,
     SerializedValueType_bigint,
     SerializedValueType_bit,
@@ -820,6 +829,7 @@ AllValidTypeIdAndInfo = Union[
     SerializedValueType_integer,
     SerializedValueType_interval,
     SerializedValueType_list,
+    "SerializedValueType_map",
     SerializedValueType_null,
     SerializedValueType_smallint,
     "SerializedValueType_struct",
@@ -888,6 +898,50 @@ class SerializedValue_struct(SerializedValueBase):
         )
 
 
+class SerializedValueTypeInfo_map(BaseModel):
+    child_type: SerializedValueType_struct
+    type: Literal["LIST_TYPE_INFO"] = "LIST_TYPE_INFO"
+    alias: str | None = None
+    modifiers: list[Any] | None = None
+
+
+class SerializedValueType_map(BaseModel):
+    id: Literal["MAP"] = "MAP"
+    type_info: SerializedValueTypeInfo_map
+
+    def sql(self) -> str:
+        return (
+            "MAP("
+            + ",".join(
+                [
+                    f'"{child.first}" {child.second.sql()}'
+                    for child in self.type_info.child_type.type_info.child_types
+                ]
+            )
+            + ")"
+        )
+
+
+class SerializedValueValue_map(BaseModel):
+    children: list["SerializedValue"]
+
+
+class SerializedValue_map(SerializedValueBase):
+    type: SerializedValueType_map
+    value: SerializedValueValue_map
+
+    def sql(self) -> str:
+        names = [child.first for child in self.type.type_info.child_type.type_info.child_types]
+        values = self.value.children
+        return (
+            "{"
+            + ",".join(
+                [f"'{name}':" + value.sql() for name, value in zip(names, values, strict=True)]
+            )
+            + "}"
+        )
+
+
 SerializedValue = Annotated[
     Annotated[SerializedValue_bigint, Tag("BIGINT")]
     | Annotated[SerializedValue_bit, Tag("BIT")]
@@ -901,6 +955,7 @@ SerializedValue = Annotated[
     | Annotated[SerializedValue_integer, Tag("INTEGER")]
     | Annotated[SerializedValue_interval, Tag("INTERVAL")]
     | Annotated[SerializedValue_list, Tag("LIST")]
+    | Annotated[SerializedValue_list, Tag("MAP")]
     | Annotated[SerializedValue_null, Tag("NULL")]
     | Annotated[SerializedValue_smallint, Tag("SMALLINT")]
     | Annotated[SerializedValue_struct, Tag("STRUCT")]
