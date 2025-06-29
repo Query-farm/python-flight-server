@@ -548,7 +548,7 @@ class SerializedValue_timestamp_s(SerializedValueBase):
             return "null"
         assert self.value
 
-        dt = datetime.fromtimestamp(self.value / 1000, tz=UTC)
+        dt = datetime.fromtimestamp(self.value, tz=UTC)
         return "TIMESTAMP_S '" + dt.strftime("%Y-%m-%d %H:%M:%S") + "'"
 
 
