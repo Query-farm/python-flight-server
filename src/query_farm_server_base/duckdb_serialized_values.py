@@ -931,16 +931,13 @@ class SerializedValue_map(SerializedValueBase):
     value: SerializedValueValue_map
 
     def sql(self) -> str:
-        names = [child.first for child in self.type.type_info.child_type.type_info.child_types]
-        values = self.value.children
-        breakpoint()
-        return (
-            "{"
-            + ",".join(
-                [f"'{name}':" + value.sql() for name, value in zip(names, values, strict=True)]
-            )
-            + "}"
-        )
+        pairs: list[str] = []
+        for child in self.value.children:
+            assert isinstance(child.value, SerializedValueValue_struct)
+            k, v = child.value.children
+            pairs.append(f"{k.sql()}:{v.sql()}")
+
+        return "{" + ",".join(pairs) + "}"
 
 
 SerializedValue = Annotated[
