@@ -914,7 +914,7 @@ class SerializedValueType_map(BaseModel):
             "MAP("
             + ",".join(
                 [
-                    f'"{child.first}" {child.second.sql()}'
+                    f"{child.second.sql()}"
                     for child in self.type_info.child_type.type_info.child_types
                 ]
             )
