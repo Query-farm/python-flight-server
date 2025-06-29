@@ -955,7 +955,7 @@ SerializedValue = Annotated[
     | Annotated[SerializedValue_integer, Tag("INTEGER")]
     | Annotated[SerializedValue_interval, Tag("INTERVAL")]
     | Annotated[SerializedValue_list, Tag("LIST")]
-    | Annotated[SerializedValue_list, Tag("MAP")]
+    | Annotated[SerializedValue_map, Tag("MAP")]
     | Annotated[SerializedValue_null, Tag("NULL")]
     | Annotated[SerializedValue_smallint, Tag("SMALLINT")]
     | Annotated[SerializedValue_struct, Tag("STRUCT")]

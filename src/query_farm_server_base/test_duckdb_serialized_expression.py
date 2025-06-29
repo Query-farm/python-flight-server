@@ -21,6 +21,195 @@ bucket_type_info = {
     "parser_cls,input",
     [
         (
+            duckdb_serialized_values.ExpressionBoundConstant,
+            {
+                "expression_class": "BOUND_CONSTANT",
+                "type": "VALUE_CONSTANT",
+                "alias": "",
+                "query_location": 18446744073709552000,
+                "value": {
+                    "type": {
+                        "id": "MAP",
+                        "type_info": {
+                            "type": "LIST_TYPE_INFO",
+                            "alias": "",
+                            "extension_info": None,
+                            "child_type": {
+                                "id": "STRUCT",
+                                "type_info": {
+                                    "type": "STRUCT_TYPE_INFO",
+                                    "alias": "",
+                                    "extension_info": None,
+                                    "child_types": [
+                                        {
+                                            "first": "key",
+                                            "second": {"id": "VARCHAR", "type_info": None},
+                                        },
+                                        {
+                                            "first": "value",
+                                            "second": {"id": "VARCHAR", "type_info": None},
+                                        },
+                                    ],
+                                },
+                            },
+                        },
+                    },
+                    "is_null": False,
+                    "value": {
+                        "children": [
+                            {
+                                "type": {
+                                    "id": "STRUCT",
+                                    "type_info": {
+                                        "type": "STRUCT_TYPE_INFO",
+                                        "alias": "",
+                                        "extension_info": None,
+                                        "child_types": [
+                                            {
+                                                "first": "key",
+                                                "second": {"id": "VARCHAR", "type_info": None},
+                                            },
+                                            {
+                                                "first": "value",
+                                                "second": {"id": "VARCHAR", "type_info": None},
+                                            },
+                                        ],
+                                    },
+                                },
+                                "is_null": False,
+                                "value": {
+                                    "children": [
+                                        {
+                                            "type": {"id": "VARCHAR", "type_info": None},
+                                            "is_null": False,
+                                            "value": "color",
+                                        },
+                                        {
+                                            "type": {"id": "VARCHAR", "type_info": None},
+                                            "is_null": False,
+                                            "value": "red",
+                                        },
+                                    ]
+                                },
+                            }
+                        ]
+                    },
+                },
+            },
+        ),
+        (
+            duckdb_serialized_values.ExpressionBoundFunction,
+            {
+                "expression_class": "BOUND_FUNCTION",
+                "type": "BOUND_FUNCTION",
+                "alias": "",
+                "query_location": 40,
+                "return_type": {
+                    "id": "STRUCT",
+                    "type_info": {
+                        "type": "STRUCT_TYPE_INFO",
+                        "alias": "",
+                        "extension_info": None,
+                        "child_types": [
+                            {"first": "color", "second": {"id": "VARCHAR", "type_info": None}}
+                        ],
+                    },
+                },
+                "children": [
+                    {
+                        "expression_class": "BOUND_FUNCTION",
+                        "type": "BOUND_FUNCTION",
+                        "alias": "color",
+                        "query_location": 49,
+                        "return_type": {"id": "VARCHAR", "type_info": None},
+                        "children": [
+                            {
+                                "expression_class": "BOUND_COLUMN_REF",
+                                "type": "BOUND_COLUMN_REF",
+                                "alias": "mapping",
+                                "query_location": 18446744073709552000,
+                                "return_type": {
+                                    "id": "MAP",
+                                    "type_info": {
+                                        "type": "LIST_TYPE_INFO",
+                                        "alias": "",
+                                        "extension_info": None,
+                                        "child_type": {
+                                            "id": "STRUCT",
+                                            "type_info": {
+                                                "type": "STRUCT_TYPE_INFO",
+                                                "alias": "",
+                                                "extension_info": None,
+                                                "child_types": [
+                                                    {
+                                                        "first": "key",
+                                                        "second": {
+                                                            "id": "VARCHAR",
+                                                            "type_info": None,
+                                                        },
+                                                    },
+                                                    {
+                                                        "first": "value",
+                                                        "second": {
+                                                            "id": "VARCHAR",
+                                                            "type_info": None,
+                                                        },
+                                                    },
+                                                ],
+                                            },
+                                        },
+                                    },
+                                },
+                                "binding": {"table_index": 0, "column_index": 0},
+                                "depth": 0,
+                            },
+                            {
+                                "expression_class": "BOUND_CONSTANT",
+                                "type": "VALUE_CONSTANT",
+                                "alias": "",
+                                "query_location": 18446744073709552000,
+                                "value": {
+                                    "type": {"id": "VARCHAR", "type_info": None},
+                                    "is_null": False,
+                                    "value": "color",
+                                },
+                            },
+                        ],
+                        "name": "map_extract_value",
+                        "arguments": [
+                            {"id": "ANY", "type_info": None},
+                            {"id": "VARCHAR", "type_info": None},
+                        ],
+                        "original_arguments": [],
+                        "catalog_name": "system",
+                        "schema_name": "main",
+                        "has_serialize": False,
+                        "is_operator": False,
+                    }
+                ],
+                "name": "struct_pack",
+                "arguments": [],
+                "original_arguments": [],
+                "catalog_name": "system",
+                "schema_name": "main",
+                "has_serialize": True,
+                "function_data": {
+                    "variable_return_type": {
+                        "id": "STRUCT",
+                        "type_info": {
+                            "type": "STRUCT_TYPE_INFO",
+                            "alias": "",
+                            "extension_info": None,
+                            "child_types": [
+                                {"first": "color", "second": {"id": "VARCHAR", "type_info": None}}
+                            ],
+                        },
+                    }
+                },
+                "is_operator": False,
+            },
+        ),
+        (
             duckdb_serialized_values.SerializedValueType_map,
             {
                 "id": "MAP",
