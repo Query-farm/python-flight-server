@@ -825,6 +825,7 @@ AllValidTypeIdAndInfo = Union[
     "SerializedValueType_struct",
     SerializedValueType_time,
     SerializedValueType_time_with_time_zone,
+    SerializedValueType_timestamp,
     SerializedValueType_timestamp_with_time_zone,
     SerializedValueType_timestamp_ms,
     SerializedValueType_timestamp_ns,
