@@ -465,6 +465,32 @@ class SerializedValue_timestamp_with_time_zone(SerializedValueBase):
         )
 
 
+class SerializedValueType_timestamp(BaseModel):
+    id: Literal["TIMESTAMP"] = "TIMESTAMP"
+    type_info: None
+
+    def sql(self) -> str:
+        return self.id
+
+
+class SerializedValue_timestamp(SerializedValueBase):
+    type: SerializedValueType_timestamp
+    value: int | None = None
+
+    def sql(self) -> str:
+        if self.is_null:
+            return "null"
+        assert self.value
+
+        return (
+            "TIMESTAMP '"
+            + datetime.fromtimestamp(int(self.value) / 1_000_000, tz=UTC).strftime(
+                "%Y-%m-%d %H:%M:%S.%f"
+            )
+            + "'"
+        )
+
+
 class SerializedValueType_timestamp_ms(BaseModel):
     id: Literal["TIMESTAMP_MS"] = "TIMESTAMP_MS"
     type_info: None
@@ -879,6 +905,7 @@ SerializedValue = Annotated[
     | Annotated[SerializedValue_struct, Tag("STRUCT")]
     | Annotated[SerializedValue_time, Tag("TIME")]
     | Annotated[SerializedValue_time_with_time_zone, Tag("TIME WITH TIME ZONE")]
+    | Annotated[SerializedValue_timestamp, Tag("TIMESTAMP")]
     | Annotated[SerializedValue_timestamp_with_time_zone, Tag("TIMESTAMP WITH TIME ZONE")]
     | Annotated[SerializedValue_timestamp_ms, Tag("TIMESTAMP_MS")]
     | Annotated[SerializedValue_timestamp_ns, Tag("TIMESTAMP_NS")]
