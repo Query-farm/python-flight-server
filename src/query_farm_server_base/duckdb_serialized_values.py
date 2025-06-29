@@ -937,7 +937,7 @@ class SerializedValue_map(SerializedValueBase):
             k, v = child.value.children
             pairs.append(f"{k.sql()}:{v.sql()}")
 
-        return "{" + ",".join(pairs) + "}"
+        return "MAP {" + ",".join(pairs) + "}"
 
 
 SerializedValue = Annotated[
