@@ -933,6 +933,7 @@ class SerializedValue_map(SerializedValueBase):
     def sql(self) -> str:
         names = [child.first for child in self.type.type_info.child_type.type_info.child_types]
         values = self.value.children
+        breakpoint()
         return (
             "{"
             + ",".join(
