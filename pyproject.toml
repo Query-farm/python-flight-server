@@ -1,8 +1,8 @@
 [project]
-name = "query-farm-server-base"
+name = "query-farm-flight-server"
 version = "0.1.0"
-description = "Add your description here"
-authors = [{ name = "Rusty Conover", email = "rusty@conover.me" }]
+description = "A framework for building Arrow Flight servers for the DuckDB Airport extension with robust authentication, schema management, and data handling capabilities."
+authors = [{ name = "Rusty Conover", email = "hello@query.farm" }]
 dependencies = [
     "structlog>=24.4.0",
     "pydantic>=2.9.2",
@@ -21,11 +21,23 @@ dependencies = [
 ]
 readme = "README.md"
 requires-python = ">= 3.12"
-classifiers = ["Private :: Do Not Upload"]
+keywords = ["duckdb", "arrow", "arrow flight", "airport", "duckdb airport", "predicate pushdown", "sql", "predicates", "flight", "sql parsing"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Topic :: Database",
+    "Topic :: Database :: Database Engines/Servers",
+    "Programming Language :: Python :: 3.12"
+]
 
+
+
+[project.urls]
+Repository = "https://github.com/query-farm/python-flight-server-base.git"
+Issues = "https://github.com/query-farm/python-flight-server-base/issues"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling==1.26.3", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [tool.rye]
@@ -51,18 +63,12 @@ files = ["py.typed"]
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/query_farm_server_base"]
+packages = ["src/query_farm_flight_server"]
 
 
 [tool.pytest]
 
 [tool.pytest.ini_options]
-#addopts = "-s "
-addopts = "--mypy"
-#env = [
-#    "AWS_SECRET_ACCESS_KEY=test",
-#    "AWS_ACCESS_KEY_ID=test",
-#]
 markers = ["moto: conflicting with boto3 based tests"]
 
 
