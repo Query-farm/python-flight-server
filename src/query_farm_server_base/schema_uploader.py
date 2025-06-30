@@ -25,8 +25,12 @@ def _compress_and_prefix_with_length(data: bytes, compression_level: int) -> byt
     return result
 
 
+def _hash_value(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
 def _build_sha256_key_name_and_hash(key_prefix: str, data: bytes) -> tuple[str, str]:
-    sha256_hash = hashlib.sha256(data).hexdigest()
+    sha256_hash = _hash_value(data)
     return (
         f"{key_prefix}/{hex_to_url_safe_characters(sha256_hash)}",
         sha256_hash,
@@ -36,7 +40,7 @@ def _build_sha256_key_name_and_hash(key_prefix: str, data: bytes) -> tuple[str, 
 def upload(
     *,
     compression_level: int | None,
-    s3_client: S3Client,
+    s3_client: S3Client | None,
     data: bytes,
     key_prefix: str,
     bucket: str,
@@ -62,6 +66,7 @@ def upload(
     s3_path, sha256_hash = _build_sha256_key_name_and_hash(key_prefix, data)
 
     if not skip_upload:
+        assert s3_client, "S3 client must be provided if not skipping upload"
         s3_client.put_object(
             Body=data,
             Bucket=bucket,
