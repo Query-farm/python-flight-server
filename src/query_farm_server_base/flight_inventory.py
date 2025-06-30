@@ -71,7 +71,7 @@ FlightInventoryWithMetadata = tuple[flight.FlightInfo, FlightSchemaMetadata]
 
 @dataclass
 class UploadParameters:
-    s3_client: S3Client
+    s3_client: S3Client | None
     base_url: str
     bucket_name: str
     bucket_prefix: str | None = None
