@@ -1,6 +1,6 @@
 # `query-farm-flight-server`
 
-A robust Python framework for building [Apache Arrow Flight](https://arrow.apache.org/blog/2020/05/06/introducing-arrow-flight/) servers that integrate seamlessly with the [Airport extension](https://github.com/query-farm/duckdb-airport) for [DuckDB](https://duckdb.org/).
+A robust Python framework for building [Apache Arrow Flight](https://arrow.apache.org/blog/2020/05/06/introducing-arrow-flight/) servers that integrate seamlessly with the [Airport extension](https://airport.query.farm) for [DuckDB](https://duckdb.org/).
 
 This framework enables secure, efficient, and scalable server implementations with features such as authentication, schema management, and predicate pushdown for data queries.
 
@@ -77,6 +77,10 @@ pip install query-farm-flight-server
 This python module is designed to be extended for specific database backends. Implement the abstract methods in `BasicFlightServer` to create a custom server for your specific data source.
 
 The project maintains strict type safety through Python's typing system and Pydantic models, ensuring robust API contracts.
+
+## Author
+
+This Python module was created by [Query.Farm](https://query.farm).
 
 # License
 
