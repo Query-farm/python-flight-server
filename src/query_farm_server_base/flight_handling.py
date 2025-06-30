@@ -52,7 +52,7 @@ def generate_record_batches_for_used_fields(
         yield new_batch
 
 
-def endpoint(
+def endpoint[AnyModel: BaseModel](
     *,
     ticket_data: AnyModel,
     locations: list[str] | None = None,
@@ -105,7 +105,9 @@ def dict_to_msgpack_duckdb_call_data_uri(data: dict[str, Any]) -> str:
     return f"data:application/x-msgpack-duckdb-function-call;base64,{b64_encoded}"
 
 
-def decode_ticket_model(source: flight.Ticket, model_cls: type[AnyModel]) -> AnyModel:
+def decode_ticket_model[AnyModel: BaseModel](
+    source: flight.Ticket, model_cls: type[AnyModel]
+) -> AnyModel:
     decode_fields: set[str] = set()
     for name, field in model_cls.model_fields.items():
         if isinstance(field.annotation, str) or (
@@ -126,7 +128,7 @@ def decode_ticket_model(source: flight.Ticket, model_cls: type[AnyModel]) -> Any
     return model_cls.model_validate(unpacked)
 
 
-def decode_ticket(
+def decode_ticket[T: FlightTicketData](
     *,
     ticket: flight.Ticket,
     model_selector: Callable[[str, bytes], T],

@@ -32,9 +32,7 @@ class AuthManagerNaive(auth_manager_memory.AuthManagerMemory[AccountType, TokenT
 
     def data_for_token(self, token: str) -> TokenType:
         if self.tokens.get(token) is None:
-            self.upsert_token(
-                self._token_type(token=token, account_id=token, email="example@example.com")
-            )
+            self.upsert_token(self._token_type(token=token, account_id=token))
             self.upsert_account(
                 self._account_type(
                     account_id=token, email="example@example.com", name="Dynamic Account"

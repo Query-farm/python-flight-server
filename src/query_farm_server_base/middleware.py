@@ -17,8 +17,6 @@ class SaveHeadersMiddleware(flight.ServerMiddleware):
 
 
 class SaveHeadersMiddlewareFactory(flight.ServerMiddlewareFactory):
-    """Test sending/receiving multiple (binary-valued) headers."""
-
     def start_call(self, info: Any, headers: dict[str, Any]) -> SaveHeadersMiddleware:
         return SaveHeadersMiddleware(headers)
 
@@ -28,7 +26,7 @@ TokenType = TypeVar("TokenType", bound=auth.AccountToken)
 
 
 @dataclass
-class SuppliedCredentials(Generic[AccountType, TokenType]):
+class SuppliedCredentials[AccountType: auth.Account, TokenType: auth.AccountToken]:
     def __init__(self, token: TokenType, account: AccountType) -> None:
         assert token
         assert account
@@ -51,7 +49,9 @@ class SaveCredentialsMiddleware(
         return {"authorization": f"Bearer {self.credentials.token.token}"}
 
 
-class AuthManagerMiddlewareFactory(Generic[AccountType, TokenType], flight.ServerMiddlewareFactory):
+class AuthManagerMiddlewareFactory[AccountType: auth.Account, TokenType: auth.AccountToken](
+    flight.ServerMiddlewareFactory
+):
     def __init__(
         self,
         *,
@@ -113,9 +113,4 @@ class AuthManagerMiddlewareFactory(Generic[AccountType, TokenType], flight.Serve
                 raise flight.FlightUnauthorizedError("Token is disabled") from None
             except auth.AccountDisabled:
                 raise flight.FlightUnauthorizedError("Account is disabled") from None
-
-        else:
-            raise flight.FlightUnauthenticatedError("Invalid authentication type")
-
-        sentry_sdk.set_user(None)
-        raise flight.FlightUnauthenticatedError("No authorization credentials supplied")
+        raise flight.FlightUnauthenticatedError("Invalid authentication type")

@@ -9,9 +9,6 @@ from query_farm_server_base.util import hex_to_url_safe_characters
 
 CACHE_CONTROL = "max-age=31536000"
 
-# TODO:
-# 1. Change this to support uploading to Cloudflare's R2 so no egress feed need to be paid.
-
 
 @dataclass
 class UploadResult:
@@ -23,7 +20,9 @@ class UploadResult:
 def _compress_and_prefix_with_length(data: bytes, compression_level: int) -> bytes:
     compressor = zstd.ZstdCompressor(level=compression_level)
     compressed_data = compressor.compress(data)
-    return msgpack.packb([len(data), compressed_data])
+    result = msgpack.packb([len(data), compressed_data])
+    assert result
+    return result
 
 
 def _build_sha256_key_name_and_hash(key_prefix: str, data: bytes) -> tuple[str, str]:

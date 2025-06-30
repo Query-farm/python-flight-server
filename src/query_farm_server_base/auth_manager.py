@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Generic, TypeVar
+from typing import Any, TypeVar
 
 import structlog
 
@@ -14,7 +14,7 @@ TokenType = TypeVar("TokenType", bound=auth.AccountToken)
 
 
 # This is your virtual base class
-class AuthManager(ABC, Generic[AccountType, TokenType]):
+class AuthManager[AccountType: auth.Account, TokenType: auth.AccountToken](ABC):
     @abstractmethod
     def allow_anonymous_access(self) -> bool:
         """Return True if anonymous access is allowed."""

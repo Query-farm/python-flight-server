@@ -36,7 +36,7 @@ def read_recordbatch(source: bytes) -> pa.RecordBatch:
 
 
 @dataclass
-class CallContext(Generic[AccountType, TokenType]):
+class CallContext[AccountType: auth.Account, TokenType: auth.AccountToken]:
     context: flight.ServerCallContext
     caller: middleware.SuppliedCredentials[AccountType, TokenType] | None
     logger: structlog.BoundLogger
