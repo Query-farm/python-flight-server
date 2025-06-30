@@ -33,8 +33,8 @@ classifiers = [
 
 
 [project.urls]
-Repository = "https://github.com/query-farm/python-flight-server-base.git"
-Issues = "https://github.com/query-farm/python-flight-server-base/issues"
+Repository = "https://github.com/query-farm/python-flight-server.git"
+Issues = "https://github.com/query-farm/python-flight-server/issues"
 
 [build-system]
 requires = ["hatchling==1.26.3", "hatch-vcs"]
