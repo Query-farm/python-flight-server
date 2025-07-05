@@ -12,53 +12,53 @@
 -e file:.
 annotated-types==0.7.0
     # via pydantic
-boto3==1.39.0
-    # via query-farm-server-base
-botocore==1.39.0
+boto3==1.39.3
+    # via query-farm-flight-server
+botocore==1.39.3
     # via boto3
     # via s3transfer
 cache3==0.4.3
-    # via query-farm-server-base
+    # via query-farm-flight-server
 certifi==2025.6.15
     # via sentry-sdk
 click==8.2.1
-    # via query-farm-server-base
+    # via query-farm-flight-server
 fuzzywuzzy==0.18.0
-    # via query-farm-server-base
+    # via query-farm-flight-server
 jmespath==1.0.1
     # via boto3
     # via botocore
 levenshtein==0.27.1
     # via python-levenshtein
 msgpack==1.1.1
-    # via query-farm-server-base
+    # via query-farm-flight-server
 mypy-boto3-dynamodb==1.39.0
-    # via query-farm-server-base
-mypy-boto3-s3==1.39.0
-    # via query-farm-server-base
+    # via query-farm-flight-server
+mypy-boto3-s3==1.39.2
+    # via query-farm-flight-server
 prettytable==3.16.0
-    # via query-farm-server-base
+    # via query-farm-flight-server
 pyarrow==20.0.0
-    # via query-farm-server-base
+    # via query-farm-flight-server
 pydantic==2.11.7
-    # via query-farm-server-base
+    # via query-farm-flight-server
 pydantic-core==2.33.2
     # via pydantic
 python-dateutil==2.9.0.post0
     # via botocore
 python-levenshtein==0.27.1
-    # via query-farm-server-base
+    # via query-farm-flight-server
 rapidfuzz==3.13.0
     # via levenshtein
 s3transfer==0.13.0
     # via boto3
 sentry-sdk==2.32.0
-    # via query-farm-server-base
+    # via query-farm-flight-server
 six==1.17.0
     # via python-dateutil
 structlog==25.4.0
-    # via query-farm-server-base
-typing-extensions==4.14.0
+    # via query-farm-flight-server
+typing-extensions==4.14.1
     # via pydantic
     # via pydantic-core
     # via typing-inspection
@@ -70,4 +70,4 @@ urllib3==2.5.0
 wcwidth==0.2.13
     # via prettytable
 zstandard==0.23.0
-    # via query-farm-server-base
+    # via query-farm-flight-server

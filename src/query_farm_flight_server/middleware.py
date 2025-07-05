@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Generic, TypeVar
+from typing import Any, TypeVar
 
 import pyarrow.flight as flight
 import sentry_sdk
