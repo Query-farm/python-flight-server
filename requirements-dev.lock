@@ -12,16 +12,16 @@
 -e file:.
 annotated-types==0.7.0
     # via pydantic
-boto3==1.39.3
+boto3==1.39.4
     # via moto
     # via query-farm-flight-server
-botocore==1.39.3
+botocore==1.39.4
     # via boto3
     # via moto
     # via s3transfer
 cache3==0.4.3
     # via query-farm-flight-server
-certifi==2025.6.15
+certifi==2025.7.9
     # via requests
     # via sentry-sdk
 cffi==1.17.1
@@ -52,7 +52,7 @@ levenshtein==0.27.1
 markupsafe==3.0.2
     # via jinja2
     # via werkzeug
-moto==5.1.6
+moto==5.1.8
 msgpack==1.1.1
     # via query-farm-flight-server
 mypy==1.16.1
@@ -103,7 +103,7 @@ requests==2.32.4
     # via responses
 responses==0.25.7
     # via moto
-ruff==0.12.2
+ruff==0.12.3
 s3transfer==0.13.0
     # via boto3
 sentry-sdk==2.32.0

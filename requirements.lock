@@ -12,14 +12,14 @@
 -e file:.
 annotated-types==0.7.0
     # via pydantic
-boto3==1.39.3
+boto3==1.39.4
     # via query-farm-flight-server
-botocore==1.39.3
+botocore==1.39.4
     # via boto3
     # via s3transfer
 cache3==0.4.3
     # via query-farm-flight-server
-certifi==2025.6.15
+certifi==2025.7.9
     # via sentry-sdk
 click==8.2.1
     # via query-farm-flight-server

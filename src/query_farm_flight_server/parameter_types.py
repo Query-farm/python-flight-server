@@ -190,7 +190,7 @@ class ChangeColumnType(AlterBase):
     _validate_column_schema = field_validator("column_schema", mode="before")(deserialize_schema)
 
 
-class ColumnStatistics(AlterBase):
+class ColumnStatistics(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)  # for Pydantic v2
     flight_descriptor: flight.FlightDescriptor
     column_name: str
