@@ -244,7 +244,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
             ActionType.COLUMN_STATISTICS: ActionHandlerSpec(
                 self.action_column_statistics,
                 parameter_types.column_statistics,
-                lambda x: x.model_dump(),
+                lambda x: x.model_dump(exclude_none=True),
                 False,
             ),
             ActionType.CREATE_TABLE: ActionHandlerSpec(
