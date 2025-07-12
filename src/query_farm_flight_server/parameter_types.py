@@ -190,6 +190,43 @@ class ChangeColumnType(AlterBase):
     _validate_column_schema = field_validator("column_schema", mode="before")(deserialize_schema)
 
 
+class ColumnStatisticsStringResults(BaseModel):
+    max: str
+    min: str
+
+
+class ColumnStatisticsNumericValueResult(BaseModel):
+    boolean: bool | None = None
+    tinyint: int | None = None
+    smallint: int | None = None
+    integer: int | None = None
+    bigint: int | None = None
+    utinyint: int | None = None
+    usmallint: int | None = None
+    uinteger: int | None = None
+    ubigint: int | None = None
+    hugeint_high: int | None = None
+    hugeint_low: int | None = None
+    float_: float | None = None
+    double_: float | None = None
+
+
+class ColumnStatisticsNumericResults(BaseModel):
+    has_min: bool
+    has_max: bool
+
+    min: ColumnStatisticsNumericValueResult | None = None
+    max: ColumnStatisticsNumericValueResult | None = None
+
+
+class ColumnStatisticsResult(BaseModel):
+    has_null: bool
+    has_not_null: bool
+    distinct_count: int
+    string_stats: ColumnStatisticsStringResults | None = None
+    numeric_stats: ColumnStatisticsNumericResults | None = None
+
+
 class ColumnStatistics(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)  # for Pydantic v2
     flight_descriptor: flight.FlightDescriptor

@@ -242,7 +242,10 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
                 False,
             ),
             ActionType.COLUMN_STATISTICS: ActionHandlerSpec(
-                self.action_column_statistics, parameter_types.column_statistics, None, False
+                self.action_column_statistics,
+                parameter_types.column_statistics,
+                lambda x: x.model_dump(),
+                False,
             ),
             ActionType.CREATE_TABLE: ActionHandlerSpec(
                 self.action_create_table,
@@ -445,7 +448,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         *,
         context: CallContext[AccountType, TokenType],
         parameters: parameter_types.ColumnStatistics,
-    ) -> dict[str, Any]:
+    ) -> parameter_types.ColumnStatisticsResult:
         self._unimplemented_action(ActionType.COLUMN_STATISTICS)
 
     def action_drop_not_null(
