@@ -136,6 +136,16 @@ def compress_list_schemas_result(result: AirportSerializedCatalogRoot) -> list[A
     return [len(packed_data), compressed_data]
 
 
+def serialize_table(table: pa.Table) -> bytes:
+    """
+    Serialize a PyArrow table to bytes.
+    """
+    sink = pa.BufferOutputStream()
+    with pa.ipc.new_stream(sink, table.schema) as writer:
+        writer.write_table(table)
+    return sink.getvalue().to_pybytes()
+
+
 class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType], ABC):
     def __init__(
         self,
@@ -244,7 +254,8 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
             ActionType.COLUMN_STATISTICS: ActionHandlerSpec(
                 self.action_column_statistics,
                 parameter_types.column_statistics,
-                lambda x: x.model_dump(exclude_none=True),
+                serialize_table,
+                False,
                 False,
             ),
             ActionType.CREATE_TABLE: ActionHandlerSpec(
@@ -448,7 +459,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         *,
         context: CallContext[AccountType, TokenType],
         parameters: parameter_types.ColumnStatistics,
-    ) -> parameter_types.ColumnStatisticsResult:
+    ) -> pa.Table:
         self._unimplemented_action(ActionType.COLUMN_STATISTICS)
 
     def action_drop_not_null(
