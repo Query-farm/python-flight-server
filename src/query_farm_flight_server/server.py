@@ -768,7 +768,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
                     writer=writer,
                     return_chunks=return_chunks,
                 )
-                last_metadata = {"total_inserted": keys_inserted}
+                last_metadata = {"total_changed": keys_inserted}
             elif airport_operation == ExchangeOperation.UPDATE:
                 keys_updated = self.exchange_update(
                     context=call_context,
@@ -777,7 +777,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
                     writer=writer,
                     return_chunks=return_chunks,
                 )
-                last_metadata = {"total_updated": keys_updated}
+                last_metadata = {"total_changed": keys_updated}
             elif airport_operation == ExchangeOperation.DELETE:
                 keys_deleted = self.exchange_delete(
                     context=call_context,
@@ -786,7 +786,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
                     writer=writer,
                     return_chunks=return_chunks,
                 )
-                last_metadata = {"total_deleted": keys_deleted}
+                last_metadata = {"total_changed": keys_deleted}
             elif airport_operation == ExchangeOperation.SCALAR_FUNCTION:
                 self.exchange_scalar_function(
                     context=call_context,

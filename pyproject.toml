@@ -1,6 +1,6 @@
 [project]
 name = "query-farm-flight-server"
-version = "0.1.4"
+version = "0.1.5"
 description = "A framework for building Arrow Flight servers for the DuckDB Airport extension with robust authentication, schema management, and data handling capabilities."
 authors = [{ name = "Rusty Conover", email = "hello@query.farm" }]
 dependencies = [
