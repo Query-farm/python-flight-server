@@ -841,7 +841,12 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
                     else:
                         # Always send a final empty batch, no matter what the make the client
                         # easier to implement.
-                        write_batch((pa.RecordBatch.from_arrays([], schema=output_schema), True))
+                        write_batch(
+                            (
+                                pa.RecordBatch.from_pylist([], schema=output_schema),
+                                True,
+                            )
+                        )
             else:
                 raise flight.FlightServerError(
                     f"Unknown airport-operation header: {airport_operation}"
