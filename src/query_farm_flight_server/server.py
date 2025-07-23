@@ -819,6 +819,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
                 ) -> bool:
                     result_batch, is_finished = generator_output
                     print("Writing to client")
+                    print(result_batch)
                     writer.write_with_metadata(
                         result_batch,
                         b"chunk_continues" if not is_finished else b"chunk_finished",
