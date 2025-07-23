@@ -1,3 +1,4 @@
+from collections.abc import Generator
 from typing import Any, Literal, TypeVar, get_args, get_origin  # noqa: UP035
 
 import msgpack
@@ -457,3 +458,16 @@ def set_default(action: flight.Action) -> SetDefault:
 
 def set_not_null(action: flight.Action) -> SetNotNull:
     return unpack_with_model(action, SetNotNull)
+
+
+# The output of the table function in-out generator, the boolean indicates if the generator
+# has more output from the previous chunk.
+TableFunctionInOutGeneratorOutput = tuple[pa.RecordBatch, bool]
+
+TableFunctionInOutGenerator = Generator[
+    TableFunctionInOutGeneratorOutput,
+    # Sent input values, it could be a new RecordBatch or a boolean indicating if the generator should continue
+    # with the previous batch.
+    pa.RecordBatch | bool | None,
+    list[pa.RecordBatch] | None,  # Final output or None
+]

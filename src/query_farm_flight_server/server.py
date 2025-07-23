@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from collections.abc import Callable, Generator, Iterator
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Generic, NoReturn, ParamSpec, TypeVar
@@ -703,7 +703,7 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
         descriptor: flight.FlightDescriptor,
         parameters: parameter_types.TableFunctionParameters,
         input_schema: pa.Schema,
-    ) -> tuple[pa.Schema, Generator[pa.RecordBatch, pa.RecordBatch, pa.RecordBatch]]:
+    ) -> tuple[pa.Schema, parameter_types.TableFunctionInOutGenerator]:
         self._unimplemented_exchange_operation(ExchangeOperation.TABLE_FUNCTION_IN_OUT)
 
     def exchange_update(
@@ -814,16 +814,34 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
                 # Prime the generator
                 generator.send(None)
 
+                def write_batch(
+                    generator_output: parameter_types.TableFunctionInOutGeneratorOutput,
+                ) -> bool:
+                    result_batch, is_finished = generator_output
+                    writer.write_with_metadata(
+                        result_batch,
+                        b"chunk_continues" if not is_finished else b"chunk_finished",
+                    )
+                    return is_finished
+
+                # This is an input chunk.
                 for item in reader:
                     assert item.data is not None
-                    result = generator.send(item.data)
-                    writer.write_batch(result)
+                    is_finished = write_batch(generator.send(item.data))
+
+                    while not is_finished:
+                        is_finished = write_batch(generator.send(True))
 
                 try:
                     generator.send(None)
                 except StopIteration as e:
                     if e.value is not None:
-                        writer.write_batch(e.value)
+                        for i, item in enumerate(e.value):
+                            write_batch((item, i == len(e.value) - 1))
+                    else:
+                        # Always send a final empty batch, no matter what the make the client
+                        # easier to implement.
+                        write_batch((pa.RecordBatch.from_arrays([], schema=output_schema), True))
             else:
                 raise flight.FlightServerError(
                     f"Unknown airport-operation header: {airport_operation}"
@@ -833,9 +851,6 @@ class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType]
                 ExchangeOperation.TABLE_FUNCTION_IN_OUT,
             ):
                 writer.write_metadata(msgpack.packb(last_metadata))
-            elif airport_operation == ExchangeOperation.TABLE_FUNCTION_IN_OUT:
-                # The last metadata is the end of the stream
-                writer.write_metadata(b"finished")
 
             writer.close()
         except Exception as e:
