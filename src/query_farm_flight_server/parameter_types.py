@@ -118,6 +118,11 @@ class CreateTable(BaseModel):
     unique_constraints: list[int]
     check_constraints: list[str]
 
+    primary_key_columns: list[str]
+    unique_columns: list[str]
+    multi_key_primary_keys: list[str]
+    extra_constraints: list[str]
+
 
 T = TypeVar("T", bound=BaseModel)
 

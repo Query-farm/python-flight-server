@@ -41,6 +41,10 @@ def test_decode_create_table() -> None:
             "not_null_constraints": [],
             "unique_constraints": [],
             "check_constraints": ["test1"],
+            "primary_key_columns": [],
+            "unique_columns": [],
+            "multi_key_primary_keys": [],
+            "extra_constraints": [],
         },
     )
 
