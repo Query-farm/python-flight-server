@@ -26,7 +26,7 @@ def first_sentence(text: str) -> str:
 T = TypeVar("T")
 
 
-def chunked_iterator(iterator: Iterator[T], chunk_size: int) -> Iterator[list[T]]:
+def chunked_iterator[T](iterator: Iterator[T], chunk_size: int) -> Iterator[list[T]]:
     """
     Chunk an iterator into lists of specified size.
 

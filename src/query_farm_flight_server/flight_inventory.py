@@ -40,6 +40,7 @@ class FlightSchemaMetadata:
         comment: str | None,
         action_name: str | None = None,
         input_schema: pa.Schema | None = None,
+        extra_data: bytes | None = None,
     ):
         self.type = type
         self.catalog = catalog
@@ -49,6 +50,7 @@ class FlightSchemaMetadata:
         self.input_schema = input_schema
         assert action_name is None or action_name != ""
         self.action_name = action_name
+        self.extra_data = extra_data
 
     def serialize(self) -> bytes:
         values_to_pack = {
@@ -58,6 +60,7 @@ class FlightSchemaMetadata:
             "name": self.name,
             "comment": self.comment,
             "action_name": self.action_name,
+            "extra_data": self.extra_data,
         }
         if self.input_schema:
             values_to_pack["input_schema"] = self.input_schema.serialize().to_pybytes()
@@ -67,6 +70,37 @@ class FlightSchemaMetadata:
 
 
 FlightInventoryWithMetadata = tuple[flight.FlightInfo, FlightSchemaMetadata]
+
+
+class ScalarFunctionMetadata(FlightSchemaMetadata):
+    """
+    Metadata for a scalar function.
+
+    """
+
+    def __init__(
+        self,
+        *,
+        catalog: str,
+        schema: str,
+        name: str,
+        comment: str | None,
+        action_name: str | None = None,
+        input_schema: pa.Schema,
+        stability: Literal["consistent", "volatile", "consistent_within_query"] = "volatile",
+    ):
+        extra_data = msgpack.packb({"stability": stability})
+        assert extra_data
+        super().__init__(
+            type="scalar_function",
+            catalog=catalog,
+            schema=schema,
+            name=name,
+            comment=comment,
+            action_name=action_name,
+            input_schema=input_schema,
+            extra_data=extra_data,
+        )
 
 
 @dataclass

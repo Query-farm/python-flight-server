@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Generic, NoReturn, ParamSpec, TypeVar
+from typing import Any, NoReturn, ParamSpec, TypeVar
 
 import msgpack
 import pyarrow as pa
@@ -146,7 +146,9 @@ def serialize_table(table: pa.Table) -> bytes:
     return sink.getvalue().to_pybytes()
 
 
-class BasicFlightServer(flight.FlightServerBase, Generic[AccountType, TokenType], ABC):
+class BasicFlightServer[AccountType: auth.Account, TokenType: auth.AccountToken](
+    flight.FlightServerBase, ABC
+):
     def __init__(
         self,
         *,

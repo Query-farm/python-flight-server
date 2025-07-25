@@ -127,7 +127,7 @@ class CreateTable(BaseModel):
 T = TypeVar("T", bound=BaseModel)
 
 
-def unpack_bytes_with_model(value: bytes, model_cls: type[T]) -> T:
+def unpack_bytes_with_model[T: BaseModel](value: bytes, model_cls: type[T]) -> T:
     decode_fields: set[str] = set()
     for name, field in model_cls.model_fields.items():
         if isinstance(field.annotation, str) or (
@@ -148,7 +148,7 @@ def unpack_bytes_with_model(value: bytes, model_cls: type[T]) -> T:
     return model_cls.model_validate(unpacked)
 
 
-def unpack_with_model(action: flight.Action, model_cls: type[T]) -> T:
+def unpack_with_model[T: BaseModel](action: flight.Action, model_cls: type[T]) -> T:
     return unpack_bytes_with_model(action.body.to_pybytes(), model_cls)
 
 
