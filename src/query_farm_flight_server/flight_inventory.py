@@ -71,6 +71,8 @@ class FlightSchemaMetadata:
 
 FlightInventoryWithMetadata = tuple[flight.FlightInfo, FlightSchemaMetadata]
 
+ScalarFunctionStability = Literal["consistent", "volatile", "consistent_within_query"]
+
 
 class ScalarFunctionMetadata(FlightSchemaMetadata):
     """
@@ -87,7 +89,7 @@ class ScalarFunctionMetadata(FlightSchemaMetadata):
         comment: str | None,
         action_name: str | None = None,
         input_schema: pa.Schema,
-        stability: Literal["consistent", "volatile", "consistent_within_query"] = "volatile",
+        stability: ScalarFunctionStability = "volatile",
     ):
         extra_data = msgpack.packb({"stability": stability})
         assert extra_data
